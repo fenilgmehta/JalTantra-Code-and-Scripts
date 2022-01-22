@@ -1,0 +1,254 @@
+fenil@server:~$ python3
+Python 3.8.10 (default, Jun  2 2021, 10:49:15)
+[GCC 9.4.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>>
+fenil@server:~$ ps -eo pid,args,comm | grep sleep
+ 869107 sleep 10009                 sleep
+ 869111 sleep 10                    sleep
+ 869113 grep --color=auto sleep     grep
+fenil@server:~$ python3
+Python 3.8.10 (default, Jun  2 2021, 10:49:15)
+[GCC 9.4.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>>
+>>> def run_command_get_output(cmd: str) -> str:
+...         # REFER: Context-Search-fms
+...         try:
+...                 status_code, output = subprocess.getstatusoutput(cmd)
+...                 return output
+...         except Exception as e:
+...                 print(e)
+...                 print(traceback.format_exc())
+...         return ""
+...
+>>> import os
+>>> import subprocess
+>>> run_command_get_output(f'kill -s SIGINT {869107}')
+'/bin/sh: 1: kill: invalid signal number or name: SIGINT'
+>>>
+fenil@server:~$ sh
+$ which kill
+/usr/bin/kill
+$ kill -s SIGINT 869107
+sh: 2: kill: invalid signal number or name: SIGINT
+$
+fenil@server:~$ which kill
+/usr/bin/kill
+fenil@server:~$ which kill
+/usr/bin/kill
+fenil@server:~$ man kill
+fenil@server:~$ kill -L | less
+fenil@server:~$ man kill
+fenil@server:~$ killl -L
+
+Command 'killl' not found, did you mean:
+
+  command 'killm' from deb ion (3.2.1+dfsg-1.1)
+  command 'kill' from deb procps (2:3.3.16-1ubuntu2.2)
+
+Try: apt install <deb name>
+
+fenil@server:~$ kill -L
+ 1) SIGHUP       2) SIGINT       3) SIGQUIT      4) SIGILL       5) SIGTRAP
+ 6) SIGABRT      7) SIGBUS       8) SIGFPE       9) SIGKILL     10) SIGUSR1
+11) SIGSEGV     12) SIGUSR2     13) SIGPIPE     14) SIGALRM     15) SIGTERM
+16) SIGSTKFLT   17) SIGCHLD     18) SIGCONT     19) SIGSTOP     20) SIGTSTP
+21) SIGTTIN     22) SIGTTOU     23) SIGURG      24) SIGXCPU     25) SIGXFSZ
+26) SIGVTALRM   27) SIGPROF     28) SIGWINCH    29) SIGIO       30) SIGPWR
+31) SIGSYS      34) SIGRTMIN    35) SIGRTMIN+1  36) SIGRTMIN+2  37) SIGRTMIN+3
+38) SIGRTMIN+4  39) SIGRTMIN+5  40) SIGRTMIN+6  41) SIGRTMIN+7  42) SIGRTMIN+8
+43) SIGRTMIN+9  44) SIGRTMIN+10 45) SIGRTMIN+11 46) SIGRTMIN+12 47) SIGRTMIN+13
+48) SIGRTMIN+14 49) SIGRTMIN+15 50) SIGRTMAX-14 51) SIGRTMAX-13 52) SIGRTMAX-12
+53) SIGRTMAX-11 54) SIGRTMAX-10 55) SIGRTMAX-9  56) SIGRTMAX-8  57) SIGRTMAX-7
+58) SIGRTMAX-6  59) SIGRTMAX-5  60) SIGRTMAX-4  61) SIGRTMAX-3  62) SIGRTMAX-2
+63) SIGRTMAX-1  64) SIGRTMAX
+fenil@server:~$ sh
+$ kill -L
+sh: 1: kill: Illegal option -L
+$ which kill
+/usr/bin/kill
+$ kill --help
+sh: 3: kill: Illegal option --
+$ kill
+sh: 4: kill: Usage: kill [-s sigspec | -signum | -sigspec] [pid | job]... or
+kill -l [exitstatus]
+$ kill -l
+0
+HUP
+INT
+QUIT
+ILL
+TRAP
+ABRT
+BUS
+FPE
+KILL
+USR1
+SEGV
+USR2
+PIPE
+ALRM
+TERM
+16
+CHLD
+CONT
+STOP
+TSTP
+TTIN
+TTOU
+URG
+XCPU
+XFSZ
+VTALRM
+PROF
+WINCH
+IO
+PWR
+SYS
+32
+33
+RTMIN
+RTMIN+1
+RTMIN+2
+RTMIN+3
+RTMIN+4
+RTMIN+5
+RTMIN+6
+RTMIN+7
+RTMIN+8
+RTMIN+9
+RTMIN+10
+RTMIN+11
+RTMIN+12
+RTMIN+13
+RTMIN+14
+RTMIN+15
+RTMAX-14
+RTMAX-13
+RTMAX-12
+RTMAX-11
+RTMAX-10
+RTMAX-9
+RTMAX-8
+RTMAX-7
+RTMAX-6
+RTMAX-5
+RTMAX-4
+RTMAX-3
+RTMAX-2
+RTMAX-1
+RTMAX
+$
+fenil@server:~$ kill
+kill: usage: kill [-s sigspec | -n signum | -sigspec] pid | jobspec ... or kill -l [sigspec]
+fenil@server:~$ sh
+$ echo $SHELL
+/bin/bash
+$ kill -s "SIGINT" 869107
+sh: 2: kill: invalid signal number or name: SIGINT
+$ man kill
+$ kill -SIGINT 869107
+sh: 4: kill: Illegal option -S
+$ man kill
+$ kill --signal=SIGINT 869107
+sh: 6: kill: Illegal option --
+$ kill -s SIGINT "869107"
+sh: 7: kill: invalid signal number or name: SIGINT
+$ echo $?
+2
+$ kill -s SIGTERM 869107
+sh: 9: kill: invalid signal number or name: SIGTERM
+$ kill -sSIGTERM 869107
+sh: 10: kill: invalid signal number or name: SIGTERM
+$ kill -sSIGINT 869107
+sh: 11: kill: invalid signal number or name: SIGINT
+$ man kill
+$ kill -l
+0
+HUP
+INT
+QUIT
+ILL
+TRAP
+ABRT
+BUS
+FPE
+KILL
+USR1
+SEGV
+USR2
+PIPE
+ALRM
+TERM
+16
+CHLD
+CONT
+STOP
+TSTP
+TTIN
+TTOU
+URG
+XCPU
+XFSZ
+VTALRM
+PROF
+WINCH
+IO
+PWR
+SYS
+32
+33
+RTMIN
+RTMIN+1
+RTMIN+2
+RTMIN+3
+RTMIN+4
+RTMIN+5
+RTMIN+6
+RTMIN+7
+RTMIN+8
+RTMIN+9
+RTMIN+10
+RTMIN+11
+RTMIN+12
+RTMIN+13
+RTMIN+14
+RTMIN+15
+RTMAX-14
+RTMAX-13
+RTMAX-12
+RTMAX-11
+RTMAX-10
+RTMAX-9
+RTMAX-8
+RTMAX-7
+RTMAX-6
+RTMAX-5
+RTMAX-4
+RTMAX-3
+RTMAX-2
+RTMAX-1
+RTMAX
+$ kill -L
+sh: 14: kill: Illegal option -L
+$
+fenil@server:~$ kill -L
+ 1) SIGHUP       2) SIGINT       3) SIGQUIT      4) SIGILL       5) SIGTRAP
+ 6) SIGABRT      7) SIGBUS       8) SIGFPE       9) SIGKILL     10) SIGUSR1
+11) SIGSEGV     12) SIGUSR2     13) SIGPIPE     14) SIGALRM     15) SIGTERM
+16) SIGSTKFLT   17) SIGCHLD     18) SIGCONT     19) SIGSTOP     20) SIGTSTP
+21) SIGTTIN     22) SIGTTOU     23) SIGURG      24) SIGXCPU     25) SIGXFSZ
+26) SIGVTALRM   27) SIGPROF     28) SIGWINCH    29) SIGIO       30) SIGPWR
+31) SIGSYS      34) SIGRTMIN    35) SIGRTMIN+1  36) SIGRTMIN+2  37) SIGRTMIN+3
+38) SIGRTMIN+4  39) SIGRTMIN+5  40) SIGRTMIN+6  41) SIGRTMIN+7  42) SIGRTMIN+8
+43) SIGRTMIN+9  44) SIGRTMIN+10 45) SIGRTMIN+11 46) SIGRTMIN+12 47) SIGRTMIN+13
+48) SIGRTMIN+14 49) SIGRTMIN+15 50) SIGRTMAX-14 51) SIGRTMAX-13 52) SIGRTMAX-12
+53) SIGRTMAX-11 54) SIGRTMAX-10 55) SIGRTMAX-9  56) SIGRTMAX-8  57) SIGRTMAX-7
+58) SIGRTMAX-6  59) SIGRTMAX-5  60) SIGRTMAX-4  61) SIGRTMAX-3  62) SIGRTMAX-2
+63) SIGRTMAX-1  64) SIGRTMAX
+fenil@server:~$ sh
+$ kill "-L"
+sh: 1: kill: Illegal option -L
+$
+fenil@server:~$

@@ -8,12 +8,18 @@ import traceback
 def run_command_get_output(cmd: str) -> str:
 	# REFER: Context-Search-fms
 	try:
-		status_code, output = subprocess.getstatusoutput(cmd)
+		# NOTE: Not using the below line of code because "sh" shell does not seem to properly parse the command
+		#       Example: `kill -s SIGINT 12345`
+		#                did not work and gave the following error:
+		#                '/bin/sh: 1: kill: invalid signal number or name: SIGINT'
+		#       The error logs of testing has been put in "REPO/logs/2022-01-22_ssh_kill_errors.txt"
+		# status_code, output = subprocess.getstatusoutput(cmd)
+		output = subprocess.check_output(['/usr/bin/bash', '-c', cmd], stderr=subprocess.STDOUT, shell=False).decode().strip()
 		return output
 	except Exception as e:
 		print(e)
 		print(traceback.format_exc())
-	return ""
+	return "0"
 
 
 # Execute this from "mtp" folder
