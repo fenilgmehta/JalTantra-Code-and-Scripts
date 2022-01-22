@@ -13,7 +13,7 @@ def run_command_get_output(cmd: str) -> str:
 	except Exception as e:
 		print(e)
 		print(traceback.format_exc())
-	return "0"
+	return ""
 
 
 # Execute this from "mtp" folder
@@ -46,8 +46,8 @@ os.system(f'mkdir -p {output_data_dir}')
 
 for model_name, data_path_prefix in model_to_input_mapping.items():
 	for ith_data_file in data_files:
-		run_command_get_output('tmux ls | grep "autorun_" | wc -l')
-		while int(run_command_get_output('tmux ls | grep "autorun_" | wc -l')) > 3:
+		print(run_command_get_output('tmux ls | grep "autorun_" | wc -l'))
+		while int(run_command_get_output('tmux ls | grep "autorun_" | wc -l')) >= 3:
 			# REFER: https://stackoverflow.com/questions/34937580/get-available-memory-in-gb-using-single-bash-shell-command/34938001
 			if float(run_command_get_output(r'''awk '/MemFree/ { printf "%.3f \n", $2/1024/1024 }' /proc/meminfo''')) <= 2:
 				print('Low on memory. Please kill some processes')
