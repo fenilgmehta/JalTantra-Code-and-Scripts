@@ -77,8 +77,9 @@ for model_name, data_path_prefix in model_to_input_mapping.items():
 			time.sleep(100)
 			# REFER: https://stackoverflow.com/a/66771847
 		short_model_name = model_name[:model_name.find('_')]
-		short_data_file_name = ith_data_file[::ith_data_file.find('_')]
+		short_data_file_name = ith_data_file[:ith_data_file.find('_')]
 		short_uniq_combination = f'{short_model_name}_{short_data_file_name}'
+		print(short_model_name, short_data_file_name, short_uniq_combination)
 		os.system(
 			rf'''
 tmux new-session -d -s 'autorun_{short_uniq_combination}' './ampl.linux-intel64/ampl > "{output_dir}/{short_uniq_combination}.txt" 2>&1 <<EOF
