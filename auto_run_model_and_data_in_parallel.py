@@ -17,8 +17,9 @@ def run_command_get_output(cmd: str) -> str:
 		output = subprocess.check_output(['/usr/bin/bash', '-c', cmd], stderr=subprocess.STDOUT, shell=False).decode().strip()
 		return output
 	except Exception as e:
-		print(e)
-		print(traceback.format_exc())
+		print('EXCEPTION OCCURRED, will return "0" as the output')
+		# print(e)
+		# print(traceback.format_exc())
 	return "0"
 
 
@@ -47,8 +48,8 @@ data_files = [
 
 output_dir = "./amplandocteract_files/others"
 output_data_dir = "./amplandocteract_files/others/data"
-os.system(f'mkdir -p {output_dir}')
-os.system(f'mkdir -p {output_data_dir}')
+run_command_get_output(f'mkdir -p {output_dir}')
+run_command_get_output(f'mkdir -p {output_data_dir}')
 PID_ABOVE = 846813
 
 for model_name, data_path_prefix in model_to_input_mapping.items():
@@ -80,9 +81,10 @@ for model_name, data_path_prefix in model_to_input_mapping.items():
 		short_data_file_name = ith_data_file[:ith_data_file.find('_')]
 		short_uniq_combination = f'{short_model_name}_{short_data_file_name}'
 		print(short_model_name, short_data_file_name, short_uniq_combination)
-		os.system(
+		run_command_get_output(
 			rf'''
 tmux new-session -d -s 'autorun_{short_uniq_combination}' './ampl.linux-intel64/ampl > "{output_dir}/{short_uniq_combination}.txt" 2>&1 <<EOF
+	reset;
 	model {models_dir}/{model_name}
 	data {data_path_prefix}/{ith_data_file}
 	option solver "{engine_path}";
@@ -96,5 +98,5 @@ EOF'
 		)
 		time.sleep(2)
 		# Copy files from /tmp folder at regular intervals to avoid losing data when system deletes them automatically
-		os.system(f'cp /tmp/at*nl /tmp/at*octsol "{output_data_dir}"')
+		run_command_get_output(f'cp /tmp/at*nl /tmp/at*octsol "{output_data_dir}"')
 
