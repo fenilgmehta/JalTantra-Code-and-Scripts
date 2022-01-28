@@ -1,0 +1,25 @@
+reset;
+
+# Configurations for BARON
+# Give relative/absolute path to the solver from directory from which AMPL was executed
+option solver baron;
+option baron_options 'outlev 1 maxtime 3600';
+option display_round 3;
+option presolve_eps 1e-9;
+
+# Change models here
+model Models/m3_descrete_segment.mod;
+
+# Use the below line for models m1 and m2 (i.e. basic and basic2) else the line after
+# data Data/m1_m2/d2_Sample_input_cycle_hanoi.dat;
+data Data/m3_m4/d2_Sample_input_cycle_hanoi.dat;
+
+solve;
+
+display _total_solve_time;
+
+display l;
+
+# Use the below line (q1,q2) for models m2 and m4 (i.e. basic2 and parallel_links) else the line after (use just q)
+# display q1,q2;
+display q
