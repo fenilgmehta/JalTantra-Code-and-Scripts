@@ -3,7 +3,7 @@ import os
 import subprocess
 import time
 import traceback
-from typing import Tuple
+from typing import List, Tuple
 
 
 def run_command(cmd: str, debug_print: bool = False) -> Tuple[bool, str]:
@@ -38,7 +38,7 @@ def get_free_ram() -> float:
 	# REFER: https://stackoverflow.com/questions/34937580/get-available-memory-in-gb-using-single-bash-shell-command/34938001
 	return float(run_command_get_output(r'''awk '/MemFree/ { printf "%.3f \n", $2/1024/1024 }' /proc/meminfo'''))
 
-def get_execution_time(pid) -> int:
+def get_execution_time(pid: int) -> int:
 	'''returns: execution time in seconds'''
 	# REFER: https://unix.stackexchange.com/questions/7870/how-to-check-how-long-a-process-has-been-running
 	success, output = run_command(f'ps -o etimes= -p "{pid}"')
@@ -46,7 +46,13 @@ def get_execution_time(pid) -> int:
 		return int(output)
 	return 10**15
 
-def time_memory_monitor_and_stopper(execution_time_limit, min_free_ram, pids_to_monitor, pids_finished, blocking):
+def time_memory_monitor_and_stopper(
+		execution_time_limit: float,
+		min_free_ram: float,
+		pids_to_monitor: List[str],
+		pids_finished: List[str],
+		blocking: bool
+	) -> None:
 	'''
 	execution_time_limit: in hours and ignored if <= 0
 	min_free_ram        : in GiB
