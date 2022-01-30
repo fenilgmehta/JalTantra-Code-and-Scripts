@@ -41,7 +41,7 @@ def get_free_ram() -> float:
 def get_execution_time(pid) -> int:
 	'''returns: execution time in seconds'''
 	# REFER: https://unix.stackexchange.com/questions/7870/how-to-check-how-long-a-process-has-been-running
-	success, output = run_command(f'ps -o etimes= -p "{pid}"').strip()
+	success, output = run_command(f'ps -o etimes= -p "{pid}"')
 	if success:
 		return int(output)
 	return 10**15
