@@ -168,6 +168,7 @@ EOF'
 		)
 		tmuxbashpid = run_command_get_output(f'cat "/tmp/{short_uniq_combination}.txt"')
 		tmuxbashpids_to_monitor.append(tmuxbashpid)
+		print(f'DEBUG: tmux session "{short_uniq_combination}" -> {tmuxbashpid}')
 		time.sleep(2)
 		# Copy files from /tmp folder at regular intervals to avoid losing data when system deletes them automatically
 		run_command_get_output(f'cp /tmp/at*nl /tmp/at*octsol "{output_data_dir}"')
