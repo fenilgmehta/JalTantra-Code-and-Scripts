@@ -44,22 +44,22 @@ engine_path = "./octeract-engine-4.0.0/bin/octeract-engine"
 models_dir = "./Files/Models"
 model_to_input_mapping = {
 	"m1_basic.mod"				: "./Files/Data/m1_m2",  # q
-	"m2_basic2.mod"			: "./Files/Data/m1_m2",      # q1, q2
+	"m2_basic2.mod"				: "./Files/Data/m1_m2",  # q1, q2
 	"m3_descrete_segment.mod"	: "./Files/Data/m3_m4",  # q
-	"m4_parallel_links.mod"	: "./Files/Data/m3_m4",      # q1, q2
+	"m4_parallel_links.mod"		: "./Files/Data/m3_m4",  # q1, q2
 }
 data_files = [
 	'd1_Sample_input_cycle_twoloop.dat',
 	'd2_Sample_input_cycle_hanoi.dat',
 	'd3_Sample_input_double_hanoi.dat',
 	'd4_Sample_input_triple_hanoi.dat',
-	# 'HG_SP_1_4.dat',
-	# 'HG_SP_2_3.dat',
-	# 'HG_SP_3_4.dat',
-	# 'HG_SP_4_2.dat',
-	# 'HG_SP_5_5.dat',
-	# 'HG_SP_6_3.dat',
-	# 'Taichung_input.dat',
+	# 'd5_Taichung_input.dat',
+	# 'd6_HG_SP_1_4.dat',
+	# 'd7_HG_SP_2_3.dat',
+	# 'd8_HG_SP_3_4.dat',
+	# 'd9_HG_SP_4_2.dat',
+	# 'd10_HG_SP_5_5.dat',
+	# 'd11_HG_SP_6_3.dat',
 ]
 
 output_dir = "./amplandocteract_files/others"
