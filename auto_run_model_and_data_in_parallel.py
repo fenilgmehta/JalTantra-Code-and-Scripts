@@ -38,6 +38,36 @@ def get_execution_time(pid) -> int:
 	# REFER: https://unix.stackexchange.com/questions/7870/how-to-check-how-long-a-process-has-been-running
 	return int(run_command_get_output(f'ps -o etimes= -p "{pid}"').strip())
 
+def time_memory_monitor_and_stopper(execution_time_limit, min_free_ram, pids_to_monitor, pids_finished, blocking):
+	'''
+	execution_time_limit: in hours and ignored if <= 0
+	min_free_ram        : in GiB
+	blocking            : waiting until one of the PID in pids_to_monitor is stopped
+	'''
+	to_run_the_loop = blocking
+	while to_run_the_loop:
+		if execution_time_limit > 0:
+			for i_bashpid in pids_to_monitor:
+				if get_execution_time(i_bashpid) >= (execution_time_limit * 60 * 60):
+					# NOTE: only SIGINT signal does proper termination of the octeract-engine
+					pid = run_command_get_output(r"pstree -aps " + str(i_bashpid) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+'")
+					print(run_command_get_output(f'kill -s SIGINT {pid}', True))
+					pids_finished.append(i_bashpid)
+					to_run_the_loop = False
+					time.sleep(2)
+			for i_bashpid in pids_finished:
+				pids_to_monitor.remove(i_bashpid)
+			pids_finished.clear()
+		if get_free_ram() <= min_free_ram:
+			# Kill the oldest executing octeract instance used to solve data+model combination
+			bashpid_tokill = sorted([(get_execution_time(p), p) for p in pids_to_monitor], reverse=True)[0][1]
+			pid = run_command_get_output(r"pstree -aps " + str(bashpid_tokill) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+'")
+			print(run_command_get_output(f'kill -s SIGINT {pid}', True))
+			pids_to_monitor.remove(bashpid_tokill)
+			time.sleep(2)
+			break
+		time.sleep(2)
+
 
 # Execute this from "mtp" folder
 engine_path = "./octeract-engine-4.0.0/bin/octeract-engine"
@@ -66,38 +96,43 @@ output_dir = "./amplandocteract_files/others"
 output_data_dir = "./amplandocteract_files/others/data"
 run_command_get_output(f'mkdir -p {output_dir}')
 run_command_get_output(f'mkdir -p {output_data_dir}')
-PID_ABOVE = 846813
+PID_ABOVE = 1197086
+EXECUTION_TIME_LIMIT = 20 / 60 / 60  # Hours, set this to any value <= 0 to ignore this parameter
+MIN_FREE_RAM = 2  # GiB
 
+pids_to_monitor = list()
+pids_finished = list()
 for model_name, data_path_prefix in model_to_input_mapping.items():
 	for ith_data_file in data_files:
 		print(run_command_get_output('tmux ls | grep "autorun_"'))
 		print(run_command_get_output('tmux ls | grep "autorun_" | wc -l'))
 		while int(run_command_get_output('tmux ls | grep "autorun_" | wc -l')) >= 3:
-			# REFER: https://stackoverflow.com/questions/34937580/get-available-memory-in-gb-using-single-bash-shell-command/34938001
-			if float(run_command_get_output(r'''awk '/MemFree/ { printf "%.3f \n", $2/1024/1024 }' /proc/meminfo''')) <= 2:
-				print('Low on memory. Please kill some processes')
-				print('Free RAM =', float(run_command_get_output(r'''awk '/MemFree/ { printf "%.3f \n", $2/1024/1024 }' /proc/meminfo''')))
-				print(run_command_get_output('date'))
-				# # RAM is <= 1.5 GiB, so, send ctrl+c to a running AMPL program
-				# pid = int(run_command_get_output(''))
-				# # # TMUX_SERVER_PID = int(run_command_get_output("ps -e | grep 'tmux: server' | awk '{print $1}'"))  # 4573 <- manually found this
-				# # # run_command_get_output(f"pstree -aps {TMUX_SERVER_PID} | grep 'ampl,' | grep -o -E '[0-9]+' | sort -n | tail -n 3")
-				for pid in run_command_get_output(r"ps -e | grep mpirun | grep -v grep | awk '{print $1}' | sort -n").split():
-					# REFER: https://bash.cyberciti.biz/guide/Sending_signal_to_Processes
-					if not (int(pid) > PID_ABOVE):
-						print(f'DEBUG: not killing PID={pid} as it is <= {PID_ABOVE} (threshold)')
-						continue
-					# NOTE: only SIGINT signal does proper termination of the octeract-engine
-					print(run_command_get_output(f'kill -s SIGINT {pid}'))
-				print()
-				break
-			time.sleep(100)
+			time_memory_monitor_and_stopper(EXECUTION_TIME_LIMIT, MIN_FREE_RAM, pids_to_monitor, pids_finished, True)
+			# if EXECUTION_TIME_LIMIT > 0 or get_free_ram() <= 2:
+			# 	print('Please kill some processes, Time limit exceeded or Low on memory')
+			# 	print('Free RAM =', get_free_ram())
+			# 	print(run_command_get_output('date'))
+			# 	# # RAM is <= 1.5 GiB, so, send ctrl+c to a running AMPL program
+			# 	# pid = int(run_command_get_output(''))
+			# 	# # # TMUX_SERVER_PID = int(run_command_get_output("ps -e | grep 'tmux: server' | awk '{print $1}'"))  # 4573 <- manually found this
+			# 	# # # run_command_get_output(f"pstree -aps {TMUX_SERVER_PID} | grep 'ampl,' | grep -o -E '[0-9]+' | sort -n | tail -n 3")
+			# 	# for pid in run_command_get_output(r"ps -e | grep mpirun | grep -v grep | awk '{print $1}' | sort -n").split():
+			# 	for pid in run_command_get_output(r"pstree -aps " + str(os.getpid()) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+' | sort -n", True).split():
+			# 		# REFER: https://bash.cyberciti.biz/guide/Sending_signal_to_Processes
+			# 		if not (int(pid) > PID_ABOVE):
+			# 			print(f'DEBUG: not killing PID={pid} as it is <= {PID_ABOVE} (threshold)')
+			# 			continue
+			# 		# NOTE: only SIGINT signal does proper termination of the octeract-engine
+			# 		print(run_command_get_output(f'kill -s SIGINT {pid}', True))
+			# 	print()
+			# 	break
+			# time.sleep(100)
 			# REFER: https://stackoverflow.com/a/66771847
 		short_model_name = model_name[:model_name.find('_')]
 		short_data_file_name = ith_data_file[:ith_data_file.find('_')]
 		short_uniq_combination = f'{short_model_name}_{short_data_file_name}'
 		print(short_model_name, short_data_file_name, short_uniq_combination)
-		run_command_get_output(
+		bashpid = run_command_get_output(
 			rf'''
 tmux new-session -d -s 'autorun_{short_uniq_combination}' './ampl.linux-intel64/ampl > "{output_dir}/{short_uniq_combination}.txt" 2>&1 <<EOF
 	reset;
@@ -112,6 +147,8 @@ tmux new-session -d -s 'autorun_{short_uniq_combination}' './ampl.linux-intel64/
 EOF'
 			'''
 		)
+		bashpid = bashpid.split()[0]
+		pids_to_monitor.append(bashpid)
 		time.sleep(2)
 		# Copy files from /tmp folder at regular intervals to avoid losing data when system deletes them automatically
 		run_command_get_output(f'cp /tmp/at*nl /tmp/at*octsol "{output_data_dir}"')
