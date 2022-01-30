@@ -114,14 +114,19 @@ PID_ABOVE = 1197086
 EXECUTION_TIME_LIMIT = 20 / 60 / 60  # Hours, set this to any value <= 0 to ignore this parameter
 MIN_FREE_RAM = 2  # GiB
 
-pids_to_monitor = list()
-pids_finished = list()
+tmuxbashpids_to_monitor = list()
+tmuxbashpids_finished = list()
 for model_name, data_path_prefix in model_to_input_mapping.items():
 	for ith_data_file in data_files:
 		print(run_command_get_output('tmux ls | grep "autorun_"'))
 		print(run_command_get_output('tmux ls | grep "autorun_" | wc -l'))
 		while int(run_command_get_output('tmux ls | grep "autorun_" | wc -l')) >= 3:
-			time_memory_monitor_and_stopper(EXECUTION_TIME_LIMIT, MIN_FREE_RAM, pids_to_monitor, pids_finished, True)
+			print("----------")
+			print(tmuxbashpids_to_monitor)
+			print(tmuxbashpids_finished)
+			time_memory_monitor_and_stopper(EXECUTION_TIME_LIMIT, MIN_FREE_RAM, tmuxbashpids_to_monitor, tmuxbashpids_finished, True)
+			print(tmuxbashpids_to_monitor)
+			print(tmuxbashpids_finished)
 			# if EXECUTION_TIME_LIMIT > 0 or get_free_ram() <= 2:
 			# 	print('Please kill some processes, Time limit exceeded or Low on memory')
 			# 	print('Free RAM =', get_free_ram())
@@ -146,9 +151,9 @@ for model_name, data_path_prefix in model_to_input_mapping.items():
 		short_data_file_name = ith_data_file[:ith_data_file.find('_')]
 		short_uniq_combination = f'{short_model_name}_{short_data_file_name}'
 		print(short_model_name, short_data_file_name, short_uniq_combination)
-		bashpid = run_command_get_output(
+		run_command_get_output(
 			rf'''
-tmux new-session -d -s 'autorun_{short_uniq_combination}' './ampl.linux-intel64/ampl > "{output_dir}/{short_uniq_combination}.txt" 2>&1 <<EOF
+tmux new-session -d -s 'autorun_{short_uniq_combination}' 'echo $$ > /tmp/{short_uniq_combination}.txt ; ./ampl.linux-intel64/ampl > "{output_dir}/{short_uniq_combination}.txt" 2>&1 <<EOF
 	reset;
 	model {models_dir}/{model_name}
 	data {data_path_prefix}/{ith_data_file}
@@ -161,14 +166,14 @@ tmux new-session -d -s 'autorun_{short_uniq_combination}' './ampl.linux-intel64/
 EOF'
 			'''
 		)
-		bashpid = bashpid.split()[0]
-		pids_to_monitor.append(bashpid)
+		tmuxbashpid = run_command_get_output(f'cat "/tmp/{short_uniq_combination}.txt"')
+		tmuxbashpids_to_monitor.append(tmuxbashpid)
 		time.sleep(2)
 		# Copy files from /tmp folder at regular intervals to avoid losing data when system deletes them automatically
 		run_command_get_output(f'cp /tmp/at*nl /tmp/at*octsol "{output_data_dir}"')
 
-while len(pids_to_monitor) > 0:
-	time_memory_monitor_and_stopper(EXECUTION_TIME_LIMIT, MIN_FREE_RAM, pids_to_monitor, pids_finished, False)
+while len(tmuxbashpids_to_monitor) > 0:
+	time_memory_monitor_and_stopper(EXECUTION_TIME_LIMIT, MIN_FREE_RAM, tmuxbashpids_to_monitor, tmuxbashpids_finished, False)
 	run_command_get_output(f'cp /tmp/at*nl /tmp/at*octsol "{output_data_dir}"')
 	time.sleep(10)
 
