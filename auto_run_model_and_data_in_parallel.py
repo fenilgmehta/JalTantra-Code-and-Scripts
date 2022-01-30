@@ -28,6 +28,16 @@ def run_command_get_output(cmd: str, debug_print: bool = False) -> str:
 		print("0")
 	return "0"
 
+def get_free_ram() -> float:
+	'''returns: free RAM in GiB'''
+	# REFER: https://stackoverflow.com/questions/34937580/get-available-memory-in-gb-using-single-bash-shell-command/34938001
+	return float(run_command_get_output(r'''awk '/MemFree/ { printf "%.3f \n", $2/1024/1024 }' /proc/meminfo'''))
+
+def get_execution_time(pid) -> int:
+	'''returns: execution time in seconds'''
+	# REFER: https://unix.stackexchange.com/questions/7870/how-to-check-how-long-a-process-has-been-running
+	return int(run_command_get_output(f'ps -o etimes= -p "{pid}"').strip())
+
 
 # Execute this from "mtp" folder
 engine_path = "./octeract-engine-4.0.0/bin/octeract-engine"
