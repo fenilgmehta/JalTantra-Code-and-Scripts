@@ -52,8 +52,9 @@ def time_memory_monitor_and_stopper(execution_time_limit, min_free_ram, pids_to_
 	min_free_ram        : in GiB
 	blocking            : waiting until one of the PID in pids_to_monitor is stopped
 	'''
-	to_run_the_loop = blocking
+	to_run_the_loop = True
 	while to_run_the_loop:
+		to_run_the_loop = blocking
 		if execution_time_limit > 0:
 			for i_bashpid in pids_to_monitor:
 				if get_execution_time(i_bashpid) >= (execution_time_limit * 60 * 60):
