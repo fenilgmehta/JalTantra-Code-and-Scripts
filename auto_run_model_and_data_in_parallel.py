@@ -9,7 +9,7 @@ from typing import Tuple
 def run_command(cmd: str, debug_print: bool = False) -> Tuple[bool, str]:
 	# REFER: Context-Search-fms
 	if debug_print:
-		print(f'DEBUG: COMMAND: {cmd}')
+		print(f'DEBUG: COMMAND: `{cmd}`')
 	try:
 		# NOTE: Not using the below line of code because "sh" shell does not seem to properly parse the command
 		#       Example: `kill -s SIGINT 12345`
@@ -174,6 +174,8 @@ EOF'
 		run_command_get_output(f'cp /tmp/at*nl /tmp/at*octsol "{output_data_dir}"')
 
 while len(tmuxbashpids_to_monitor) > 0:
+	print(tmuxbashpids_to_monitor)
+	print(tmuxbashpids_finished)
 	time_memory_monitor_and_stopper(EXECUTION_TIME_LIMIT, MIN_FREE_RAM, tmuxbashpids_to_monitor, tmuxbashpids_finished, False)
 	run_command_get_output(f'cp /tmp/at*nl /tmp/at*octsol "{output_data_dir}"')
 	time.sleep(10)
