@@ -41,7 +41,10 @@ def get_free_ram() -> float:
 def get_execution_time(pid) -> int:
 	'''returns: execution time in seconds'''
 	# REFER: https://unix.stackexchange.com/questions/7870/how-to-check-how-long-a-process-has-been-running
-	return int(run_command_get_output(f'ps -o etimes= -p "{pid}"').strip())
+	success, output = run_command(f'ps -o etimes= -p "{pid}"').strip()
+	if success:
+		return int(output)
+	return 10**15
 
 def time_memory_monitor_and_stopper(execution_time_limit, min_free_ram, pids_to_monitor, pids_finished, blocking):
 	'''
@@ -55,10 +58,13 @@ def time_memory_monitor_and_stopper(execution_time_limit, min_free_ram, pids_to_
 			for i_bashpid in pids_to_monitor:
 				if get_execution_time(i_bashpid) >= (execution_time_limit * 60 * 60):
 					# NOTE: only SIGINT signal does proper termination of the octeract-engine
-					pid = run_command_get_output(r"pstree -aps " + str(i_bashpid) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+'")
-					print(run_command_get_output(f'kill -s SIGINT {pid}', True))
+					success, pid = run_command(r"pstree -aps " + str(i_bashpid) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+'")
 					pids_finished.append(i_bashpid)
 					to_run_the_loop = False
+					if success:
+						print(run_command_get_output(f'kill -s SIGINT {pid}', True))
+					else:
+						print(f'DEBUG: TIME_LIMIT: tmux session (with bash PID={i_bashpid}) already finished')
 					time.sleep(2)
 			for i_bashpid in pids_finished:
 				pids_to_monitor.remove(i_bashpid)
