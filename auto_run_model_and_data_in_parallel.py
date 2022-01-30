@@ -3,9 +3,10 @@ import os
 import subprocess
 import time
 import traceback
+from typing import Tuple
 
 
-def run_command_get_output(cmd: str, debug_print: bool = False) -> str:
+def run_command(cmd: str, debug_print: bool = False) -> Tuple[bool, str]:
 	# REFER: Context-Search-fms
 	if debug_print:
 		print(f'DEBUG: COMMAND: {cmd}')
@@ -19,14 +20,18 @@ def run_command_get_output(cmd: str, debug_print: bool = False) -> str:
 		output = subprocess.check_output(['/usr/bin/bash', '-c', cmd], stderr=subprocess.STDOUT, shell=False).decode().strip()
 		if debug_print:
 			print(output)
-		return output
+		return True, output
 	except Exception as e:
-		print(f'EXCEPTION OCCURRED (cmd="{cmd}"), will return "0" as the output')
+		print(f'EXCEPTION OCCURRED (cmd=`{cmd}`), will return "0" as the output')
 		# print(e)
 		# print(traceback.format_exc())
 	if debug_print:
 		print("0")
-	return "0"
+	return False, "0"
+
+
+def run_command_get_output(cmd: str, debug_print: bool = False) -> str:
+	return run_command(cmd, debug_print)[1]
 
 def get_free_ram() -> float:
 	'''returns: free RAM in GiB'''
