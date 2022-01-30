@@ -100,3 +100,6 @@ EOF'
 		# Copy files from /tmp folder at regular intervals to avoid losing data when system deletes them automatically
 		run_command_get_output(f'cp /tmp/at*nl /tmp/at*octsol "{output_data_dir}"')
 
+# NOTE: When the last batch is running, we have to manually:
+#       1. stop them using ctrl+c
+#       2. execute the `cp` command and copy the data/solution files
