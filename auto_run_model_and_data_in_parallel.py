@@ -3,7 +3,7 @@ import os
 import subprocess
 import time
 import traceback
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 
 def run_command(cmd: str, debug_print: bool = False) -> Tuple[bool, str]:
@@ -38,7 +38,7 @@ def get_free_ram() -> float:
 	# REFER: https://stackoverflow.com/questions/34937580/get-available-memory-in-gb-using-single-bash-shell-command/34938001
 	return float(run_command_get_output(r'''awk '/MemFree/ { printf "%.3f \n", $2/1024/1024 }' /proc/meminfo'''))
 
-def get_execution_time(pid: int) -> int:
+def get_execution_time(pid: Union[int, str]) -> int:
 	'''returns: execution time in seconds'''
 	# REFER: https://unix.stackexchange.com/questions/7870/how-to-check-how-long-a-process-has-been-running
 	success, output = run_command(f'ps -o etimes= -p "{pid}"')
@@ -65,7 +65,7 @@ def time_memory_monitor_and_stopper(
 			for i_bashpid in pids_to_monitor:
 				if get_execution_time(i_bashpid) >= (execution_time_limit * 60 * 60):
 					# NOTE: only SIGINT signal does proper termination of the octeract-engine
-					success, pid = run_command(r"pstree -aps " + str(i_bashpid) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+'")
+					success, pid = run_command(r"pstree -aps " + str(i_bashpid) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+'  # Time Monitor")
 					pids_finished.append(i_bashpid)
 					to_run_the_loop = False
 					if success:
@@ -79,7 +79,7 @@ def time_memory_monitor_and_stopper(
 		if get_free_ram() <= min_free_ram:
 			# Kill the oldest executing octeract instance used to solve data+model combination
 			bashpid_tokill = sorted([(get_execution_time(p), p) for p in pids_to_monitor], reverse=True)[0][1]
-			success, pid = run_command(r"pstree -aps " + str(bashpid_tokill) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+'")
+			success, pid = run_command(r"pstree -aps " + str(bashpid_tokill) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+'  # RAM Monitor", debug_print=True)
 			pids_to_monitor.remove(bashpid_tokill)
 			if success:
 				print(run_command_get_output(f'kill -s SIGINT {pid}', True))
@@ -95,7 +95,7 @@ engine_path = "./octeract-engine-4.0.0/bin/octeract-engine"
 models_dir = "./Files/Models"
 model_to_input_mapping = {
 	"m1_basic.mod"				: "./Files/Data/m1_m2",  # q
-	"m2_basic2.mod"				: "./Files/Data/m1_m2",  # q1, q2
+	"m2_basic2_v2.mod"			: "./Files/Data/m1_m2",  # q1, q2
 	"m3_descrete_segment.mod"	: "./Files/Data/m3_m4",  # q
 	"m4_parallel_links.mod"		: "./Files/Data/m3_m4",  # q1, q2
 }
@@ -117,8 +117,7 @@ output_dir = "./amplandocteract_files/others"
 output_data_dir = "./amplandocteract_files/others/data"
 run_command_get_output(f'mkdir -p {output_dir}')
 run_command_get_output(f'mkdir -p {output_data_dir}')
-PID_ABOVE = 1197086
-EXECUTION_TIME_LIMIT = 20 / 60 / 60  # Hours, set this to any value <= 0 to ignore this parameter
+EXECUTION_TIME_LIMIT = 4  # Hours, set this to any value <= 0 to ignore this parameter
 MIN_FREE_RAM = 2  # GiB
 
 tmuxbashpids_to_monitor = list()
