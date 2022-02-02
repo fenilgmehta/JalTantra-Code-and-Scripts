@@ -65,11 +65,13 @@ def time_memory_monitor_and_stopper(
 			for i_bashpid in pids_to_monitor:
 				if get_execution_time(i_bashpid) >= (execution_time_limit * 60 * 60):
 					# NOTE: only SIGINT signal does proper termination of the octeract-engine
-					success, pid = run_command(r"pstree -aps " + str(i_bashpid) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+'  # Time Monitor")
+					print(run_command_get_output(r"pstree -ap " + str(i_bashpid) + r" | grep -oE 'mpirun,[0-9]+'  # Time"))
+					print(run_command_get_output(r"pstree -aps " + str(i_bashpid) + r" | grep -oE 'mpirun,[0-9]+'  # Time"))
+					success, pid = run_command(r"pstree -ap " + str(i_bashpid) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+'  # Time Monitor", debug_print=True)
 					pids_finished.append(i_bashpid)
 					to_run_the_loop = False
 					if success:
-						print(run_command_get_output(f'kill -s SIGINT {pid}', True))
+						print(run_command_get_output(f'kill -s SIGINT {pid}  # Time Monitor', True))
 					else:
 						print(f'DEBUG: TIME_LIMIT: tmux session (with bash PID={i_bashpid}) already finished')
 					time.sleep(2)
@@ -79,10 +81,12 @@ def time_memory_monitor_and_stopper(
 		if get_free_ram() <= min_free_ram:
 			# Kill the oldest executing octeract instance used to solve data+model combination
 			bashpid_tokill = sorted([(get_execution_time(p), p) for p in pids_to_monitor], reverse=True)[0][1]
-			success, pid = run_command(r"pstree -aps " + str(bashpid_tokill) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+'  # RAM Monitor", debug_print=True)
+			print(run_command_get_output(r"pstree -ap " + str(bashpid_tokill) + r" | grep -oE 'mpirun,[0-9]+'  # RAM"))
+			print(run_command_get_output(r"pstree -aps " + str(bashpid_tokill) + r" | grep -oE 'mpirun,[0-9]+'  # RAM"))
+			success, pid = run_command(r"pstree -ap " + str(bashpid_tokill) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+'  # RAM Monitor", debug_print=True)
 			pids_to_monitor.remove(bashpid_tokill)
 			if success:
-				print(run_command_get_output(f'kill -s SIGINT {pid}', True))
+				print(run_command_get_output(f'kill -s SIGINT {pid}  # RAM Monitor', True))
 			else:
 				print(f'DEBUG: RAM_USAGE: tmux session (with bash PID={bashpid_tokill}) already finished')
 			time.sleep(2)
