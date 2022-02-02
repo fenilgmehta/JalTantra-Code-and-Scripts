@@ -1,5 +1,5 @@
 #!/usr/bin/bash
-mkdir sys_stats
+mkdir -p sys_stats
 while true
 do
 	suffix=$(date +"%y-%m-%d_%H-%M-%S")
