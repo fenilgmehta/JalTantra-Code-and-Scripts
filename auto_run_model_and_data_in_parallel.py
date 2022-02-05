@@ -130,8 +130,8 @@ EXECUTION_TIME_LIMIT = 4  # Hours, set this to any value <= 0 to ignore this par
 MIN_FREE_RAM = 2  # GiB
 MIN_FREE_SWAP = 8  # GiB
 
-run_command_get_output(f'mkdir -p {output_dir}')
-run_command_get_output(f'mkdir -p {output_data_dir}')
+run_command_get_output(f'mkdir -p "{output_dir}"')
+run_command_get_output(f'mkdir -p "{output_data_dir}"')
 tmuxbashpids_to_monitor = list()
 tmuxbashpids_finished = list()
 for model_name, data_path_prefix in model_to_input_mapping.items():
