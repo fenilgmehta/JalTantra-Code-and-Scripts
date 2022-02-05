@@ -44,7 +44,7 @@ def get_execution_time(pid: Union[int, str]) -> int:
 	success, output = run_command(f'ps -o etimes= -p "{pid}"')
 	if success:
 		return int(output)
-	return 10**15
+	return 10**15  # ~3.17 crore years
 
 def time_memory_monitor_and_stopper(
 		execution_time_limit: float,
@@ -108,29 +108,31 @@ data_files = [
 	'd2_Sample_input_cycle_hanoi.dat',
 	'd3_Sample_input_double_hanoi.dat',
 	'd4_Sample_input_triple_hanoi.dat',
-	# 'd5_Taichung_input.dat',
-	# 'd6_HG_SP_1_4.dat',
-	# 'd7_HG_SP_2_3.dat',
-	# 'd8_HG_SP_3_4.dat',
-	# 'd9_HG_SP_4_2.dat',
-	# 'd10_HG_SP_5_5.dat',
-	# 'd11_HG_SP_6_3.dat',
+	'd5_Taichung_input.dat',
+	'd6_HG_SP_1_4.dat',
+	'd7_HG_SP_2_3.dat',
+	'd8_HG_SP_3_4.dat',
+	'd9_HG_SP_4_2.dat',
+	'd10_HG_SP_5_5.dat',
+	'd11_HG_SP_6_3.dat',
 ]
 
 output_dir = "./amplandocteract_files/others"
-output_data_dir = "./amplandocteract_files/others/data"
-run_command_get_output(f'mkdir -p {output_dir}')
-run_command_get_output(f'mkdir -p {output_data_dir}')
+output_data_dir = f"{output_dir}/data"
+CPU_CORES_PER_SOLVER = 16
+MAX_PARALLEL_SOLVERS = 3
 EXECUTION_TIME_LIMIT = 4  # Hours, set this to any value <= 0 to ignore this parameter
 MIN_FREE_RAM = 2  # GiB
 
+run_command_get_output(f'mkdir -p {output_dir}')
+run_command_get_output(f'mkdir -p {output_data_dir}')
 tmuxbashpids_to_monitor = list()
 tmuxbashpids_finished = list()
 for model_name, data_path_prefix in model_to_input_mapping.items():
 	for ith_data_file in data_files:
 		print(run_command_get_output('tmux ls | grep "autorun_"'))
 		print(run_command_get_output('tmux ls | grep "autorun_" | wc -l'))
-		while int(run_command_get_output('tmux ls | grep "autorun_" | wc -l')) >= 3:
+		while int(run_command_get_output('tmux ls | grep "autorun_" | wc -l')) >= MAX_PARALLEL_SOLVERS:
 			print("----------")
 			print(tmuxbashpids_to_monitor)
 			print(tmuxbashpids_finished)
@@ -168,7 +170,7 @@ tmux new-session -d -s 'autorun_{short_uniq_combination}' 'echo $$ > /tmp/{short
 	model {models_dir}/{model_name}
 	data {data_path_prefix}/{ith_data_file}
 	option solver "{engine_path}";
-	options octeract_options "num_cores=16";
+	options octeract_options "num_cores={CPU_CORES_PER_SOLVER}";
 	solve;
 	display _total_solve_time;
 	display l;
