@@ -38,6 +38,11 @@ def get_free_ram() -> float:
 	# REFER: https://stackoverflow.com/questions/34937580/get-available-memory-in-gb-using-single-bash-shell-command/34938001
 	return float(run_command_get_output(r'''awk '/MemFree/ { printf "%.3f \n", $2/1024/1024 }' /proc/meminfo'''))
 
+def get_free_swap() -> float:
+	'''returns: free Swap in GiB'''
+	# REFER: https://stackoverflow.com/questions/34937580/get-available-memory-in-gb-using-single-bash-shell-command/34938001
+	return float(run_command_get_output(r'''awk '/SwapFree/ { printf "%.3f \n", $2/1024/1024 }' /proc/meminfo'''))
+
 def get_execution_time(pid: Union[int, str]) -> int:
 	'''returns: execution time in seconds'''
 	# REFER: https://unix.stackexchange.com/questions/7870/how-to-check-how-long-a-process-has-been-running
@@ -123,6 +128,7 @@ CPU_CORES_PER_SOLVER = 16
 MAX_PARALLEL_SOLVERS = 3
 EXECUTION_TIME_LIMIT = 4  # Hours, set this to any value <= 0 to ignore this parameter
 MIN_FREE_RAM = 2  # GiB
+MIN_FREE_SWAP = 8  # GiB
 
 run_command_get_output(f'mkdir -p {output_dir}')
 run_command_get_output(f'mkdir -p {output_data_dir}')
