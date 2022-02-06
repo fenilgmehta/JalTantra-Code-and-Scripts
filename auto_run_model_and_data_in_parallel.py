@@ -95,6 +95,8 @@ def time_memory_monitor_and_stopper(
 	min_free_ram        : in GiB
 	blocking            : waiting until one of the PID in pids_to_monitor is stopped
 	'''
+	global CPU_CORES_PER_SOLVER
+	process_name_to_stop_using_ctrl_c = 'mpirun' if CPU_CORES_PER_SOLVER > 1 else 'octeract-engine'
 	to_run_the_loop = True
 	while to_run_the_loop:
 		to_run_the_loop = blocking
@@ -102,9 +104,10 @@ def time_memory_monitor_and_stopper(
 			for i_bashpid in pids_to_monitor:
 				if get_execution_time(i_bashpid) >= (execution_time_limit * 60 * 60):
 					# NOTE: only SIGINT signal does proper termination of the octeract-engine
-					print(run_command_get_output(r"pstree -ap " + str(i_bashpid) + r" | grep -oE 'mpirun,[0-9]+'  # Time"))
-					print(run_command_get_output(r"pstree -aps " + str(i_bashpid) + r" | grep -oE 'mpirun,[0-9]+'  # Time"))
-					success, pid = run_command(r"pstree -ap " + str(i_bashpid) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+'  # Time Monitor", debug_print=True)
+					print(run_command_get_output("pstree -ap " + str(i_bashpid), debug_print=True))
+					print(run_command_get_output("pstree -ap " + str(i_bashpid) + f" | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # Time"))
+					print(run_command_get_output("pstree -aps " + str(i_bashpid) + f" | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # Time"))
+					success, pid = run_command("pstree -ap " + str(i_bashpid) + f" | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+' | grep -oE '[0-9]+'  # Time Monitor", debug_print=True)
 					pids_finished.append(i_bashpid)
 					to_run_the_loop = False
 					if success:
@@ -118,9 +121,9 @@ def time_memory_monitor_and_stopper(
 		if get_free_ram() <= min_free_ram:
 			# Kill the oldest executing octeract instance used to solve data+model combination
 			bashpid_tokill = sorted([(get_execution_time(p), p) for p in pids_to_monitor], reverse=True)[0][1]
-			print(run_command_get_output(r"pstree -ap " + str(bashpid_tokill) + r" | grep -oE 'mpirun,[0-9]+'  # RAM"))
-			print(run_command_get_output(r"pstree -aps " + str(bashpid_tokill) + r" | grep -oE 'mpirun,[0-9]+'  # RAM"))
-			success, pid = run_command(r"pstree -ap " + str(bashpid_tokill) + r" | grep -oE 'mpirun,[0-9]+' | grep -oE '[0-9]+'  # RAM Monitor", debug_print=True)
+			print(run_command_get_output("pstree -ap " + str(bashpid_tokill) + f" | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # RAM"))
+			print(run_command_get_output("pstree -aps " + str(bashpid_tokill) + f" | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # RAM"))
+			success, pid = run_command("pstree -ap " + str(bashpid_tokill) + f" | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+' | grep -oE '[0-9]+'  # RAM Monitor", debug_print=True)
 			pids_to_monitor.remove(bashpid_tokill)
 			if success:
 				print(run_command_get_output(f'kill -s SIGINT {pid}  # RAM Monitor', True))
