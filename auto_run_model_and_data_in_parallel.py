@@ -6,6 +6,38 @@ import traceback
 from typing import List, Tuple, Union
 
 
+# Execute this from "mtp" folder
+engine_path = "./octeract-engine-4.0.0/bin/octeract-engine"
+models_dir = "./Files/Models"
+model_to_input_mapping = {
+	"m1_basic.mod"				: "./Files/Data/m1_m2",  # q
+	"m2_basic2_v2.mod"			: "./Files/Data/m1_m2",  # q1, q2
+	"m3_descrete_segment.mod"	: "./Files/Data/m3_m4",  # q
+	"m4_parallel_links.mod"		: "./Files/Data/m3_m4",  # q1, q2
+}
+data_files = [
+	'd1_Sample_input_cycle_twoloop.dat',
+	'd2_Sample_input_cycle_hanoi.dat',
+	'd3_Sample_input_double_hanoi.dat',
+	'd4_Sample_input_triple_hanoi.dat',
+	'd5_Taichung_input.dat',
+	'd6_HG_SP_1_4.dat',
+	'd7_HG_SP_2_3.dat',
+	'd8_HG_SP_3_4.dat',
+	'd9_HG_SP_4_2.dat',
+	'd10_HG_SP_5_5.dat',
+	'd11_HG_SP_6_3.dat',
+]
+
+output_dir = "./amplandocteract_files/others_009 (valid, 1 core, 4hr)"
+output_data_dir = f"{output_dir}/data"
+CPU_CORES_PER_SOLVER = 1
+MAX_PARALLEL_SOLVERS = 8
+EXECUTION_TIME_LIMIT = 4  # Hours, set this to any value <= 0 to ignore this parameter
+MIN_FREE_RAM = 2  # GiB
+MIN_FREE_SWAP = 8  # GiB, will only be used if "MIN_FREE_RAM == 0"
+
+
 def run_command(cmd: str, debug_print: bool = False) -> Tuple[bool, str]:
 	# REFER: Context-Search-fms
 	if debug_print:
@@ -98,37 +130,6 @@ def time_memory_monitor_and_stopper(
 			break
 		time.sleep(2)
 
-
-# Execute this from "mtp" folder
-engine_path = "./octeract-engine-4.0.0/bin/octeract-engine"
-models_dir = "./Files/Models"
-model_to_input_mapping = {
-	"m1_basic.mod"				: "./Files/Data/m1_m2",  # q
-	"m2_basic2_v2.mod"			: "./Files/Data/m1_m2",  # q1, q2
-	"m3_descrete_segment.mod"	: "./Files/Data/m3_m4",  # q
-	"m4_parallel_links.mod"		: "./Files/Data/m3_m4",  # q1, q2
-}
-data_files = [
-	'd1_Sample_input_cycle_twoloop.dat',
-	'd2_Sample_input_cycle_hanoi.dat',
-	'd3_Sample_input_double_hanoi.dat',
-	'd4_Sample_input_triple_hanoi.dat',
-	'd5_Taichung_input.dat',
-	'd6_HG_SP_1_4.dat',
-	'd7_HG_SP_2_3.dat',
-	'd8_HG_SP_3_4.dat',
-	'd9_HG_SP_4_2.dat',
-	'd10_HG_SP_5_5.dat',
-	'd11_HG_SP_6_3.dat',
-]
-
-output_dir = "./amplandocteract_files/others"
-output_data_dir = f"{output_dir}/data"
-CPU_CORES_PER_SOLVER = 16
-MAX_PARALLEL_SOLVERS = 3
-EXECUTION_TIME_LIMIT = 4  # Hours, set this to any value <= 0 to ignore this parameter
-MIN_FREE_RAM = 2  # GiB
-MIN_FREE_SWAP = 8  # GiB
 
 run_command_get_output(f'mkdir -p "{output_dir}"')
 run_command_get_output(f'mkdir -p "{output_data_dir}"')
