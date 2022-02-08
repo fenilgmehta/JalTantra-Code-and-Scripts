@@ -7,7 +7,23 @@ from typing import List, Tuple, Union
 
 
 # Execute this from "mtp" folder
-engine_path = "./octeract-engine-4.0.0/bin/octeract-engine"
+
+output_dir = "./amplandocteract_files/others_011 (valid, 1 core, 4hr, baron)"
+output_data_dir = f"{output_dir}/data"
+CPU_CORES_PER_SOLVER = 1
+MAX_PARALLEL_SOLVERS = 8
+EXECUTION_TIME_LIMIT = (4 * 60 * 60) + (1 * 60) + 0  # Seconds, set this to any value <= 0 to ignore this parameter
+MIN_FREE_RAM = 2  # GiB
+MIN_FREE_SWAP = 8  # GiB, will only be used if "MIN_FREE_RAM == 0"
+
+# NOTE: Use double quotes ONLY in the below variables three
+# engine_path = './octeract-engine-4.0.0/bin/octeract-engine'
+# engine_options = f'options octeract_options "num_cores={CPU_CORES_PER_SOLVER}";'
+# process_name_to_stop_using_ctrl_c = 'mpirun' if CPU_CORES_PER_SOLVER > 1 else 'octeract-engine'
+engine_path = './ampl.linux-intel64/baron'
+engine_options = f'option baron_options "maxtime={EXECUTION_TIME_LIMIT - 60} threads={CPU_CORES_PER_SOLVER} barstats keepsol lsolmsg outlev=1 prfreq=100 prtime=2 problem";'
+process_name_to_stop_using_ctrl_c = 'baron'
+
 models_dir = "./Files/Models"
 model_to_input_mapping = {
 	"m1_basic.mod"				: "./Files/Data/m1_m2",  # q
@@ -28,14 +44,6 @@ data_files = [
 	'd10_HG_SP_5_5.dat',
 	'd11_HG_SP_6_3.dat',
 ]
-
-output_dir = "./amplandocteract_files/others_009 (valid, 1 core, 4hr)"
-output_data_dir = f"{output_dir}/data"
-CPU_CORES_PER_SOLVER = 1
-MAX_PARALLEL_SOLVERS = 8
-EXECUTION_TIME_LIMIT = 4  # Hours, set this to any value <= 0 to ignore this parameter
-MIN_FREE_RAM = 2  # GiB
-MIN_FREE_SWAP = 8  # GiB, will only be used if "MIN_FREE_RAM == 0"
 
 
 def run_command(cmd: str, debug_print: bool = False) -> Tuple[bool, str]:
@@ -91,18 +99,17 @@ def time_memory_monitor_and_stopper(
 		blocking: bool
 	) -> None:
 	'''
-	execution_time_limit: in hours and ignored if <= 0
+	execution_time_limit: in seconds and ignored if <= 0
 	min_free_ram        : in GiB
 	blocking            : waiting until one of the PID in pids_to_monitor is stopped
 	'''
-	global CPU_CORES_PER_SOLVER
-	process_name_to_stop_using_ctrl_c = 'mpirun' if CPU_CORES_PER_SOLVER > 1 else 'octeract-engine'
+	global CPU_CORES_PER_SOLVER, process_name_to_stop_using_ctrl_c
 	to_run_the_loop = True
 	while to_run_the_loop:
 		to_run_the_loop = blocking
 		if execution_time_limit > 0:
 			for i_bashpid in pids_to_monitor:
-				if get_execution_time(i_bashpid) >= (execution_time_limit * 60 * 60):
+				if get_execution_time(i_bashpid) >= execution_time_limit:
 					# NOTE: only SIGINT signal does proper termination of the octeract-engine
 					print(run_command_get_output("pstree -ap " + str(i_bashpid), debug_print=True))
 					print(run_command_get_output("pstree -ap " + str(i_bashpid) + f" | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # Time"))
@@ -180,7 +187,7 @@ tmux new-session -d -s 'autorun_{short_uniq_combination}' 'echo $$ > /tmp/{short
 	model {models_dir}/{model_name}
 	data {data_path_prefix}/{ith_data_file}
 	option solver "{engine_path}";
-	options octeract_options "num_cores={CPU_CORES_PER_SOLVER}";
+	{engine_options}
 	solve;
 	display _total_solve_time;
 	display l;
@@ -193,13 +200,14 @@ EOF'
 		print(f'DEBUG: tmux session "{short_uniq_combination}" -> {tmuxbashpid}')
 		time.sleep(2)
 		# Copy files from /tmp folder at regular intervals to avoid losing data when system deletes them automatically
-		run_command_get_output(f'cp /tmp/at*nl /tmp/at*octsol "{output_data_dir}"')
+		run_command_get_output(f'cp -r /tmp/at*nl /tmp/at*octsol /tmp/baron_tmp* "{output_data_dir}"')
 
 while len(tmuxbashpids_to_monitor) > 0:
 	print(tmuxbashpids_to_monitor)
 	print(tmuxbashpids_finished)
 	time_memory_monitor_and_stopper(EXECUTION_TIME_LIMIT, MIN_FREE_RAM, tmuxbashpids_to_monitor, tmuxbashpids_finished, False)
-	run_command_get_output(f'cp /tmp/at*nl /tmp/at*octsol "{output_data_dir}"')
+	run_command_get_output(f'cp -r /tmp/at*nl /tmp/at*octsol /tmp/baron_tmp* "{output_data_dir}"')
 	time.sleep(10)
 
-run_command_get_output(f'cp /tmp/at*nl /tmp/at*octsol "{output_data_dir}"')
+time.sleep(60)
+run_command_get_output(f'cp -r /tmp/at*nl /tmp/at*octsol /tmp/baron_tmp* "{output_data_dir}"')
