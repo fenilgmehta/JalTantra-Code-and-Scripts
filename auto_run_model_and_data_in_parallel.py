@@ -26,10 +26,10 @@ process_name_to_stop_using_ctrl_c = 'baron'
 
 models_dir = "./Files/Models"
 model_to_input_mapping = {
-	"m1_basic.mod"				: "./Files/Data/m1_m2",  # q
-	"m2_basic2_v2.mod"			: "./Files/Data/m1_m2",  # q1, q2
-	"m3_descrete_segment.mod"	: "./Files/Data/m3_m4",  # q
-	"m4_parallel_links.mod"		: "./Files/Data/m3_m4",  # q1, q2
+	"m1_basic.R"				: "./Files/Data/m1_m2",  # q
+	"m2_basic2_v2.R"			: "./Files/Data/m1_m2",  # q1, q2
+	"m3_descrete_segment.R"		: "./Files/Data/m3_m4",  # q
+	"m4_parallel_links.R"		: "./Files/Data/m3_m4",  # q1, q2
 }
 data_files = [
 	'd1_Sample_input_cycle_twoloop.dat',
