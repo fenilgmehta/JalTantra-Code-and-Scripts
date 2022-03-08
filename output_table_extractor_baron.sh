@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# ls m1* | sort -V | xargs -I{} -n 1 ../../output_table_extractor_baron.sh {}
+# ls m2* | sort -V | xargs -I{} -n 1 ../../output_table_extractor_baron.sh {}
+# ls m3* | sort -V | xargs -I{} -n 1 ../../output_table_extractor_baron.sh {}
+# ls m4* | sort -V | xargs -I{} -n 1 ../../output_table_extractor_baron.sh {}
+
 echo -e "Processing file = '$1'"
 
 OUTPUT_AWK=$(cat "$1" | awk -F'  +' '

@@ -1,4 +1,10 @@
 #!/usr/bin/bash
+
+# ls m1* | sort -V | xargs -I{} -n 1 ../../output_table_extractor_octeract.sh {}
+# ls m2* | sort -V | xargs -I{} -n 1 ../../output_table_extractor_octeract.sh {}
+# ls m3* | sort -V | xargs -I{} -n 1 ../../output_table_extractor_octeract.sh {}
+# ls m4* | sort -V | xargs -I{} -n 1 ../../output_table_extractor_octeract.sh {}
+
 echo -e "Processing file = '$1'"
 cat "$1" | cut -c50- | awk -F'  +' '
 BEGIN {f=0; rows=0}
