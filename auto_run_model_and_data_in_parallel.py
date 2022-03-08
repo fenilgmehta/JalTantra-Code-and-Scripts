@@ -73,15 +73,18 @@ def run_command(cmd: str, debug_print: bool = False) -> Tuple[bool, str]:
 def run_command_get_output(cmd: str, debug_print: bool = False) -> str:
 	return run_command(cmd, debug_print)[1]
 
+
 def get_free_ram() -> float:
 	'''returns: free RAM in GiB'''
 	# REFER: https://stackoverflow.com/questions/34937580/get-available-memory-in-gb-using-single-bash-shell-command/34938001
 	return float(run_command_get_output(r'''awk '/MemFree/ { printf "%.3f \n", $2/1024/1024 }' /proc/meminfo'''))
 
+
 def get_free_swap() -> float:
 	'''returns: free Swap in GiB'''
 	# REFER: https://stackoverflow.com/questions/34937580/get-available-memory-in-gb-using-single-bash-shell-command/34938001
 	return float(run_command_get_output(r'''awk '/SwapFree/ { printf "%.3f \n", $2/1024/1024 }' /proc/meminfo'''))
+
 
 def get_execution_time(pid: Union[int, str]) -> int:
 	'''returns: execution time in seconds'''
@@ -90,6 +93,7 @@ def get_execution_time(pid: Union[int, str]) -> int:
 	if success:
 		return int(output)
 	return 10**15  # ~3.17 crore years
+
 
 def time_memory_monitor_and_stopper(
 		execution_time_limit: float,
