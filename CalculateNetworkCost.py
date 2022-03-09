@@ -75,11 +75,9 @@ def get_execution_time(pid: Union[int, str]) -> int:
 
 class AutoExecutorSettings:
     AVAILABLE_SOLVERS = ['baron', 'octeract']
-    AVAILABLE_MODELS = [1, 2, 3, 4]
+    AVAILABLE_MODELS = {1: 'm1_basic.R', 2: 'm2_basic2_v2.R', 3: 'm3_descrete_segment.R', 4: 'm4_parallel_links.R'}
 
     def __init__(self):
-        self.output_dir = './NetworkResults/'.rstrip('/')  # Note: Do not put trailing forward slash ('/')
-        self.output_data_dir = f'{self.output_dir}/SolutionData'
         self.CPU_CORES_PER_SOLVER = 1
         # 48 core server is being used
         self.MAX_PARALLEL_SOLVERS = 44
@@ -87,11 +85,16 @@ class AutoExecutorSettings:
         self.EXECUTION_TIME_LIMIT = (0 * 60 * 60) + (5 * 60) + 0
         self.MIN_FREE_RAM = 2  # GiB
         self.MIN_FREE_SWAP = 8  # GiB, usefulness of this variable depends on the swappiness of the system
-        # NOTE: Update `AutoExecutorSettings.AVAILABLE_MODELS`
+
+        self.output_dir = './NetworkResults/'.rstrip('/')  # Note: Do not put trailing forward slash ('/')
+        self.output_data_dir = f'{self.output_dir}/SolutionData'
         self.models_dir = "./Files/Models"  # m1, m3 => q   ,   m2, m4 => q1, q2
-        self.models: List = [None, 'm1_basic.R', 'm2_basic2_v2.R', 'm3_descrete_segment.R', 'm4_parallel_links.R']
         self.solvers: Dict = {}
         self.__update_solver_dict()
+
+        # Tuples of (Solver name & Model number) which are to be executed to
+        # find the cost of the given graph/network (i.e. data/testcase file)
+        self.solver_model_combinations: List[Tuple[str, int]] = list()
 
     def set_execution_time_limit(self, hours: int = None, minutes: int = None, seconds: int = None) -> None:
         if (hours, minutes, seconds).count(None) == 3:
