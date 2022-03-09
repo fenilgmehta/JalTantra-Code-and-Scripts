@@ -206,10 +206,9 @@ if __name__ == '__main__':
     # noinspection PyTypeChecker
     my_parser = argparse.ArgumentParser(
         prog='CalculateNetworkCost.py',
-        description='Find cost of a network by executing various solvers',
-        epilog=f"Note:"
-               f"\n  • TODO: add message here"
-               f"\n\nEnjoy the program :)",
+        description='Find cost of any graph/network (i.e. data/testcase file) '
+                    'by executing various solvers using different models',
+        epilog="Enjoy the program :)",
         prefix_chars='-',
         fromfile_prefix_chars='@',
         allow_abbrev=False,
@@ -225,25 +224,71 @@ if __name__ == '__main__':
     my_parser.add_argument('--version', action='version')
 
 
+    # REFER: https://stackoverflow.com/questions/1265665/how-can-i-check-if-a-string-represents-an-int-without-using-try-except
     def parser_check_solver_models(val: str) -> str:
-        # REFER: https://stackoverflow.com/questions/1265665/how-can-i-check-if-a-string-represents-an-int-without-using-try-except
         val_splitted = val.split()
         if len(val_splitted) == 0:
             raise argparse.ArgumentTypeError(f"no value passed")
         if len(val_splitted) == 1:
             if val_splitted[0] in AutoExecutorSettings.AVAILABLE_SOLVERS:
                 raise argparse.ArgumentTypeError(f"no model numbers given")
-            raise argparse.ArgumentTypeError(f"invalid solver name and no model number given")
+            raise argparse.ArgumentTypeError(f"invalid solver name")
         if val_splitted[0] not in AutoExecutorSettings.AVAILABLE_SOLVERS:
             raise argparse.ArgumentTypeError(f"invalid solver name")
         for i in val_splitted[1:]:
             if not i.isdigit():
                 raise argparse.ArgumentTypeError(f"model number should be int")
-            if int(i) not in AutoExecutorSettings.AVAILABLE_MODELS:
+            if int(i) not in AutoExecutorSettings.AVAILABLE_MODELS.keys():
                 raise argparse.ArgumentTypeError(f"invalid model number value: '{i}', "
-                                                 f"valid values = {AutoExecutorSettings.AVAILABLE_MODELS}")
+                                                 f"valid values = {list(AutoExecutorSettings.AVAILABLE_MODELS.keys())}")
         return val
 
+
+    def parser_check_time_range(val: str) -> int:
+        if val.count(':') != 2:
+            raise argparse.ArgumentTypeError(f"invalid time value: '{val}', correct format is 'hh:mm:ss'")
+        val_splitted = []
+        # Handle inputs like '::30'
+        for i in val.split(':'):
+            val_splitted.append(i if len(i) > 0 else '0')
+        for i in val_splitted:
+            if not i.isdigit():
+                raise argparse.ArgumentTypeError(f"invalid int value: '{val}'")
+        if int(val_splitted[1]) >= 60:
+            raise argparse.ArgumentTypeError(f"invalid minutes value: '{val}', 0 <= minutes < 60")
+        if int(val_splitted[2]) >= 60:
+            raise argparse.ArgumentTypeError(f"invalid seconds value: '{val}', 0 <= seconds < 60")
+        seconds = int(val_splitted[0]) * 60 * 60 + int(val_splitted[1]) * 60 + int(val_splitted[2])
+        if seconds < 30:
+            raise argparse.ArgumentTypeError('minimum `N` is 30')
+        return seconds
+
+
+    def parser_check_threads_int_range(c: str) -> int:
+        if not c.isdigit():
+            raise argparse.ArgumentTypeError(f"invalid int value: '{c}'")
+        val = int(c)
+        if val < 1:
+            raise argparse.ArgumentTypeError('minimum `N` is 1')
+        return val
+
+
+    def parser_check_jobs_int_range(c: str) -> int:
+        if not c.isdigit():
+            raise argparse.ArgumentTypeError(f"invalid int value: '{c}'")
+        val = int(c)
+        if val < 0:
+            raise argparse.ArgumentTypeError('minimum `N` is 0')
+        return val
+
+
+    my_parser.add_argument('-p',
+                           '--path',
+                           metavar='PATH',
+                           action='store',
+                           type=str,
+                           required=True,
+                           help='Path to graph/network (i.e. data/testcase file')
 
     my_parser.add_argument('--solver-models',
                            metavar='VAL',
@@ -254,17 +299,35 @@ if __name__ == '__main__':
                            help='Space separated `SOLVER_NAME MODEL_NUMBER [MODEL_NUMBER ...]`'
                                 '\nNote:'
                                 f'\n  • AVAILABLE SOLVERS = {AutoExecutorSettings.AVAILABLE_SOLVERS}'
-                                f'\n  • AVAILABLE MODELS = {AutoExecutorSettings.AVAILABLE_MODELS}'
+                                f'\n  • AVAILABLE MODELS = {list(AutoExecutorSettings.AVAILABLE_MODELS.keys())}'
                                 '\nExample Usage:\n  • --solver-models "baron 1 2 3 4" "octeract 1 2 3 4"')
+
+    my_parser.add_argument('--time',
+                           metavar='HH:MM:SS',
+                           action='store',
+                           # REFER: https://stackoverflow.com/questions/18700634/python-argparse-integer-condition-12
+                           type=parser_check_time_range,
+                           default=300,
+                           help='Number of seconds a solver can execute [default: 00:05:00 = 5 min = 300 seconds]'
+                                '\nRequirement: N >= 30 seconds')
+
+    my_parser.add_argument('--threads-per-solver-instance',
+                           metavar='N',
+                           action='store',
+                           # REFER: https://stackoverflow.com/questions/18700634/python-argparse-integer-condition-12
+                           type=parser_check_threads_int_range,
+                           default=1,
+                           help='Set the number of threads a solver instance can have [default: 1]'
+                                '\nRequirement: N >= 1')
 
     my_parser.add_argument('-j',
                            '--jobs',
                            metavar='N',
                            action='store',
                            # REFER: https://stackoverflow.com/questions/18700634/python-argparse-integer-condition-12
-                           type=int,
+                           type=parser_check_jobs_int_range,
                            default=0,
-                           help='Max instances of solvers to execute in parallel [default: 0]'
+                           help='Set maximum number of instances of solvers that can execute in parallel [default: 0]'
                                 '\nRequirement: N >= 0'
                                 '\nNote:\n  • N=0 -> `nproc` or `len(os.sched_getaffinity(0))`')
 
