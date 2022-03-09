@@ -93,7 +93,13 @@ class AutoExecutorSettings:
         self.solvers: Dict = {}
         self.__update_solver_dict()
 
-    def set_execution_time_limit(self, hours: int, minutes: int, seconds: int) -> None:
+    def set_execution_time_limit(self, hours: int = None, minutes: int = None, seconds: int = None) -> None:
+        if (hours, minutes, seconds).count(None) == 3:
+            print('At least one value should be non-None to update EXECUTION_TIME_LIMIT')
+            return
+        hours = 0 if hours is None else hours
+        minutes = 0 if minutes is None else minutes
+        seconds = 0 if seconds is None else seconds
         self.EXECUTION_TIME_LIMIT = (hours * 60 * 60) + (minutes * 60) + seconds
         self.__update_solver_dict()
 
