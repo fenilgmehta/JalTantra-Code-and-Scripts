@@ -4,14 +4,13 @@ import subprocess
 import time
 from typing import List, Tuple, Union, Dict
 
-
 # ---
 
 # NOTE
 # Assumptions
 #   1. Linux OS is used for execution
-#   2. Execution is done from "mtp" folder
-
+#   2. `bash`, `which`, `nproc`, `tmux` are installed
+#   3. Execution is done from "mtp" folder
 
 # ---
 
