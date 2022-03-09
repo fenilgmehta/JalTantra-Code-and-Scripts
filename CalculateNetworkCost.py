@@ -14,6 +14,10 @@ from typing import List, Tuple, Union, Dict
 
 # ---
 
+# REFER: https://stackoverflow.com/questions/3172470/actual-meaning-of-shell-true-in-subprocess
+BASH_PATH = subprocess.check_output(['which', 'bash'], shell=False).decode().strip()
+
+
 def run_command(cmd: str, default_result: str = '0', debug_print: bool = False) -> Tuple[bool, str]:
     # REFER: Context-Search-fms
     if debug_print:
@@ -26,7 +30,7 @@ def run_command(cmd: str, default_result: str = '0', debug_print: bool = False) 
         #       The error logs of testing has been put in "REPO/logs/2022-01-22_ssh_kill_errors.txt"
         # status_code, output = subprocess.getstatusoutput(cmd)
         output = subprocess.check_output(
-            ['/usr/bin/bash', '-c', cmd],
+            [BASH_PATH, '-c', cmd],
             stderr=subprocess.STDOUT,
             shell=False
         ).decode().strip()
