@@ -198,6 +198,27 @@ def main():
     pass
 
 
+def update_settings(args: argparse.Namespace):
+    global g_auto_executor_settings
+    # print(args)
+
+    g_auto_executor_settings.set_execution_time_limit(seconds=args.time)
+
+    for solver_model_numbers_list in args.solver_models:
+        for solver_model_numbers in solver_model_numbers_list:
+            splitted_txt = solver_model_numbers.split()
+            solver_name, model_numbers = splitted_txt[0], splitted_txt[1:]
+            for i in model_numbers:
+                g_auto_executor_settings.solver_model_combinations.append((solver_name, model_numbers))
+
+    g_auto_executor_settings.CPU_CORES_PER_SOLVER = args.threads_per_solver_instance
+
+    if args.jobs == 0:
+        g_auto_executor_settings.MAX_PARALLEL_SOLVERS = run_command_get_output('nproc')
+    else:
+        g_auto_executor_settings.MAX_PARALLEL_SOLVERS = args.jobs
+
+
 if __name__ == '__main__':
     # Create the parser
     # REFER: https://realpython.com/command-line-interfaces-python-argparse/
@@ -331,4 +352,5 @@ if __name__ == '__main__':
                                 '\nRequirement: N >= 0'
                                 '\nNote:\n  • N=0 -> `nproc` or `len(os.sched_getaffinity(0))`')
 
+    update_settings(my_parser.parse_args())
     main()
