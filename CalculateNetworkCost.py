@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 import argparse
 import hashlib
+import logging
 import os
 import subprocess
 import sys
 import time
 from typing import List, Tuple, Union, Dict
+
+from rich.logging import RichHandler as rich_RichHandler
+
+g_logger = logging.getLogger('CNC')
 
 # ---
 
@@ -86,6 +91,7 @@ def get_execution_time(pid: Union[int, str]) -> int:
 def file_md5(file_path) -> str:
     """It is assumed that the file will exist"""
     # REFER: https://stackoverflow.com/questions/16874598/how-do-i-calculate-the-md5-checksum-of-a-file-in-python
+    global g_logger
     total_bytes = os.path.getsize(file_path)
     with open(file_path, "rb") as f:
         file_hash = hashlib.md5()
@@ -96,8 +102,9 @@ def file_md5(file_path) -> str:
             file_hash.update(chunk)
             new_progress = (100 * total_progress) // total_bytes
             if new_progress != last_progress_printed:
-                delete_last_lines()
-                print(f'\rHash calculation {new_progress}% done')
+                if g_logger.getEffectiveLevel() <= logging.INFO:
+                    delete_last_lines()
+                    g_logger.info(f'Hash calculation {new_progress}% done')
                 last_progress_printed = new_progress
             chunk = f.read(8192)
             total_progress = min(total_progress + len(chunk), total_bytes)
@@ -235,16 +242,31 @@ def main():
 
 
 def update_settings(args: argparse.Namespace):
-    global g_auto_executor_settings
-    # print(args)
+    global g_logger, g_auto_executor_settings
+
+    # noinspection PyArgumentList
+    logging.basicConfig(
+        level=(logging.DEBUG if args.debug else logging.WARNING),
+        format='%(funcName)s :: %(message)s',
+        datefmt="[%X]",
+        handlers=[rich_RichHandler()]
+    )
+    g_logger = logging.getLogger('CNC')
+
+    g_logger.debug(args)
 
     if not os.path.exists(args.path):
         print(f"Cannot access '{args.path}': No such file or directory")
         exit(1)
     g_auto_executor_settings.data_file_path = args.path
     g_auto_executor_settings.data_file_md5_hash = file_md5(args.path)
+    g_logger.debug(f"Graph/Network (i.e. Data/Testcase file) = '{g_auto_executor_settings.data_file_path}'")
+    g_logger.debug(f"Input file md5 = '{g_auto_executor_settings.data_file_md5_hash}'")
 
     g_auto_executor_settings.set_execution_time_limit(seconds=args.time)
+    g_logger.debug(f'Execution Time = {g_auto_executor_settings.EXECUTION_TIME_LIMIT // 60 // 60:02}:'
+                   f'{(g_auto_executor_settings.EXECUTION_TIME_LIMIT // 60) % 60:02}:'
+                   f'{g_auto_executor_settings.EXECUTION_TIME_LIMIT % 60:02}')
 
     for solver_model_numbers_list in args.solver_models:
         for solver_model_numbers in solver_model_numbers_list:
@@ -254,13 +276,16 @@ def update_settings(args: argparse.Namespace):
                 g_auto_executor_settings.solver_model_combinations.append((
                     solver_name, AutoExecutorSettings.AVAILABLE_MODELS[int(i)]
                 ))
+    g_logger.debug(f'Solver Model Combinations = {g_auto_executor_settings.solver_model_combinations}')
 
     g_auto_executor_settings.CPU_CORES_PER_SOLVER = args.threads_per_solver_instance
+    g_logger.debug(f'CPU_CORES_PER_SOLVER = {g_auto_executor_settings.CPU_CORES_PER_SOLVER}')
 
     if args.jobs == 0:
         g_auto_executor_settings.MAX_PARALLEL_SOLVERS = run_command_get_output('nproc')
     else:
         g_auto_executor_settings.MAX_PARALLEL_SOLVERS = args.jobs
+    g_logger.debug(f'MAX_PARALLEL_SOLVERS = {g_auto_executor_settings.MAX_PARALLEL_SOLVERS}')
 
 
 if __name__ == '__main__':
@@ -395,6 +420,10 @@ if __name__ == '__main__':
                            help='Set maximum number of instances of solvers that can execute in parallel [default: 0]'
                                 '\nRequirement: N >= 0'
                                 '\nNote:\n  • N=0 -> `nproc` or `len(os.sched_getaffinity(0))`')
+
+    my_parser.add_argument('--debug',
+                           action='store_true',
+                           help='Print debug information.')
 
     update_settings(my_parser.parse_args())
     main()
