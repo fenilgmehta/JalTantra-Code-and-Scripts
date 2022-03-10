@@ -288,6 +288,64 @@ def update_settings(args: argparse.Namespace):
     g_logger.debug(f'MAX_PARALLEL_SOLVERS = {g_auto_executor_settings.MAX_PARALLEL_SOLVERS}')
 
 
+# REFER: https://stackoverflow.com/questions/1265665/how-can-i-check-if-a-string-represents-an-int-without-using-try-except
+def parser_check_solver_models(val: str) -> str:
+    val_splitted = val.split()
+    if len(val_splitted) == 0:
+        raise argparse.ArgumentTypeError(f"no value passed")
+    if len(val_splitted) == 1:
+        if val_splitted[0] in AutoExecutorSettings.AVAILABLE_SOLVERS:
+            raise argparse.ArgumentTypeError(f"no model numbers given")
+        raise argparse.ArgumentTypeError(f"invalid solver name")
+    if val_splitted[0] not in AutoExecutorSettings.AVAILABLE_SOLVERS:
+        raise argparse.ArgumentTypeError(f"invalid solver name")
+    for i in val_splitted[1:]:
+        if not i.isdigit():
+            raise argparse.ArgumentTypeError(f"model number should be int")
+        if int(i) not in AutoExecutorSettings.AVAILABLE_MODELS.keys():
+            raise argparse.ArgumentTypeError(f"invalid model number value: '{i}', "
+                                             f"valid values = {list(AutoExecutorSettings.AVAILABLE_MODELS.keys())}")
+    return val
+
+
+def parser_check_time_range(val: str) -> int:
+    if val.count(':') != 2:
+        raise argparse.ArgumentTypeError(f"invalid time value: '{val}', correct format is 'hh:mm:ss'")
+    val_splitted = []
+    # Handle inputs like '::30'
+    for i in val.split(':'):
+        val_splitted.append(i if len(i) > 0 else '0')
+    for i in val_splitted:
+        if not i.isdigit():
+            raise argparse.ArgumentTypeError(f"invalid int value: '{val}'")
+    if int(val_splitted[1]) >= 60:
+        raise argparse.ArgumentTypeError(f"invalid minutes value: '{val}', 0 <= minutes < 60")
+    if int(val_splitted[2]) >= 60:
+        raise argparse.ArgumentTypeError(f"invalid seconds value: '{val}', 0 <= seconds < 60")
+    seconds = int(val_splitted[0]) * 60 * 60 + int(val_splitted[1]) * 60 + int(val_splitted[2])
+    if seconds < 30:
+        raise argparse.ArgumentTypeError('minimum `N` is 30')
+    return seconds
+
+
+def parser_check_threads_int_range(c: str) -> int:
+    if not c.isdigit():
+        raise argparse.ArgumentTypeError(f"invalid int value: '{c}'")
+    val = int(c)
+    if val < 1:
+        raise argparse.ArgumentTypeError('minimum `N` is 1')
+    return val
+
+
+def parser_check_jobs_int_range(c: str) -> int:
+    if not c.isdigit():
+        raise argparse.ArgumentTypeError(f"invalid int value: '{c}'")
+    val = int(c)
+    if val < 0:
+        raise argparse.ArgumentTypeError('minimum `N` is 0')
+    return val
+
+
 if __name__ == '__main__':
     # Create the parser
     # REFER: https://realpython.com/command-line-interfaces-python-argparse/
@@ -312,65 +370,6 @@ if __name__ == '__main__':
 
     # Add the arguments
     my_parser.add_argument('--version', action='version')
-
-
-    # REFER: https://stackoverflow.com/questions/1265665/how-can-i-check-if-a-string-represents-an-int-without-using-try-except
-    def parser_check_solver_models(val: str) -> str:
-        val_splitted = val.split()
-        if len(val_splitted) == 0:
-            raise argparse.ArgumentTypeError(f"no value passed")
-        if len(val_splitted) == 1:
-            if val_splitted[0] in AutoExecutorSettings.AVAILABLE_SOLVERS:
-                raise argparse.ArgumentTypeError(f"no model numbers given")
-            raise argparse.ArgumentTypeError(f"invalid solver name")
-        if val_splitted[0] not in AutoExecutorSettings.AVAILABLE_SOLVERS:
-            raise argparse.ArgumentTypeError(f"invalid solver name")
-        for i in val_splitted[1:]:
-            if not i.isdigit():
-                raise argparse.ArgumentTypeError(f"model number should be int")
-            if int(i) not in AutoExecutorSettings.AVAILABLE_MODELS.keys():
-                raise argparse.ArgumentTypeError(f"invalid model number value: '{i}', "
-                                                 f"valid values = {list(AutoExecutorSettings.AVAILABLE_MODELS.keys())}")
-        return val
-
-
-    def parser_check_time_range(val: str) -> int:
-        if val.count(':') != 2:
-            raise argparse.ArgumentTypeError(f"invalid time value: '{val}', correct format is 'hh:mm:ss'")
-        val_splitted = []
-        # Handle inputs like '::30'
-        for i in val.split(':'):
-            val_splitted.append(i if len(i) > 0 else '0')
-        for i in val_splitted:
-            if not i.isdigit():
-                raise argparse.ArgumentTypeError(f"invalid int value: '{val}'")
-        if int(val_splitted[1]) >= 60:
-            raise argparse.ArgumentTypeError(f"invalid minutes value: '{val}', 0 <= minutes < 60")
-        if int(val_splitted[2]) >= 60:
-            raise argparse.ArgumentTypeError(f"invalid seconds value: '{val}', 0 <= seconds < 60")
-        seconds = int(val_splitted[0]) * 60 * 60 + int(val_splitted[1]) * 60 + int(val_splitted[2])
-        if seconds < 30:
-            raise argparse.ArgumentTypeError('minimum `N` is 30')
-        return seconds
-
-
-    def parser_check_threads_int_range(c: str) -> int:
-        if not c.isdigit():
-            raise argparse.ArgumentTypeError(f"invalid int value: '{c}'")
-        val = int(c)
-        if val < 1:
-            raise argparse.ArgumentTypeError('minimum `N` is 1')
-        return val
-
-
-    def parser_check_jobs_int_range(c: str) -> int:
-        if not c.isdigit():
-            raise argparse.ArgumentTypeError(f"invalid int value: '{c}'")
-        val = int(c)
-        if val < 0:
-            raise argparse.ArgumentTypeError('minimum `N` is 0')
-        return val
-
 
     my_parser.add_argument('-p',
                            '--path',
