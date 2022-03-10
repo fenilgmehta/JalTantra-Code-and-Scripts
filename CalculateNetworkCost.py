@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import argparse
+import hashlib
+import os
 import subprocess
 import sys
 import time
@@ -80,6 +82,29 @@ def get_execution_time(pid: Union[int, str]) -> int:
         return int(output)
     return 10 ** 15  # ~3.17 crore years
 
+
+def file_md5(file_path) -> str:
+    """It is assumed that the file will exist"""
+    # REFER: https://stackoverflow.com/questions/16874598/how-do-i-calculate-the-md5-checksum-of-a-file-in-python
+    total_bytes = os.path.getsize(file_path)
+    with open(file_path, "rb") as f:
+        file_hash = hashlib.md5()
+        chunk = f.read(8192)
+        total_progress = min(len(chunk), total_bytes)
+        last_progress_printed = -1
+        while chunk:
+            file_hash.update(chunk)
+            new_progress = (100 * total_progress) // total_bytes
+            if new_progress != last_progress_printed:
+                delete_last_lines()
+                print(f'\rHash calculation {new_progress}% done')
+                last_progress_printed = new_progress
+            chunk = f.read(8192)
+            total_progress = min(total_progress + len(chunk), total_bytes)
+    return file_hash.hexdigest()
+
+
+# ---
 
 class AutoExecutorSettings:
     AVAILABLE_SOLVERS = ['baron', 'octeract']
