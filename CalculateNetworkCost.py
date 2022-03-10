@@ -125,9 +125,9 @@ class AutoExecutorSettings:
         self.solvers = {}
         self.__update_solver_dict()
 
-        # Tuples of (Solver name & Model number) which are to be executed to
+        # Tuples of (Solver name & Model name) which are to be executed to
         # find the cost of the given graph/network (i.e. data/testcase file)
-        self.solver_model_combinations: List[Tuple[str, int]] = list()
+        self.solver_model_combinations: List[Tuple[str, str]] = list()
         # Path to graph/network (i.e. data/testcase file)
         self.data_file_path: str = ''
         self.data_file_md5_hash: str = ''
@@ -251,7 +251,9 @@ def update_settings(args: argparse.Namespace):
             splitted_txt = solver_model_numbers.split()
             solver_name, model_numbers = splitted_txt[0], splitted_txt[1:]
             for i in model_numbers:
-                g_auto_executor_settings.solver_model_combinations.append((solver_name, model_numbers))
+                g_auto_executor_settings.solver_model_combinations.append((
+                    solver_name, AutoExecutorSettings.AVAILABLE_MODELS[int(i)]
+                ))
 
     g_auto_executor_settings.CPU_CORES_PER_SOLVER = args.threads_per_solver_instance
 
