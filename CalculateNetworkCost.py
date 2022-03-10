@@ -122,12 +122,15 @@ class AutoExecutorSettings:
         self.output_dir = './NetworkResults/'.rstrip('/')  # Note: Do not put trailing forward slash ('/')
         self.output_data_dir = f'{self.output_dir}/SolutionData'
         self.models_dir = "./Files/Models"  # m1, m3 => q   ,   m2, m4 => q1, q2
-        self.solvers: Dict = {}
+        self.solvers = {}
         self.__update_solver_dict()
 
         # Tuples of (Solver name & Model number) which are to be executed to
         # find the cost of the given graph/network (i.e. data/testcase file)
         self.solver_model_combinations: List[Tuple[str, int]] = list()
+        # Path to graph/network (i.e. data/testcase file)
+        self.data_file_path: str = ''
+        self.data_file_md5_hash: str = ''
 
     def set_execution_time_limit(self, hours: int = None, minutes: int = None, seconds: int = None) -> None:
         if (hours, minutes, seconds).count(None) == 3:
@@ -234,6 +237,12 @@ def main():
 def update_settings(args: argparse.Namespace):
     global g_auto_executor_settings
     # print(args)
+
+    if not os.path.exists(args.path):
+        print(f"Cannot access '{args.path}': No such file or directory")
+        exit(1)
+    g_auto_executor_settings.data_file_path = args.path
+    g_auto_executor_settings.data_file_md5_hash = file_md5(args.path)
 
     g_auto_executor_settings.set_execution_time_limit(seconds=args.time)
 
