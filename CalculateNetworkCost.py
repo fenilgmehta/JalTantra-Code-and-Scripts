@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import subprocess
+import sys
 import time
 from typing import List, Tuple, Union, Dict
 
@@ -51,6 +52,13 @@ def run_command_get_output(cmd: str, debug_print: bool = False) -> str:
 
 
 # ---
+
+def delete_last_lines(n=1):
+    # REFER: https://www.quora.com/How-can-I-delete-the-last-printed-line-in-Python-language
+    for _ in range(n):
+        sys.stdout.write('\x1b[1A')  # Cursor up one line
+        sys.stdout.write('\x1b[2K')  # Erase line
+
 
 def get_free_ram() -> float:
     """returns: free RAM in GiB"""
