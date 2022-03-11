@@ -27,6 +27,12 @@ BASH_PATH = subprocess.check_output(['which', 'bash'], shell=False).decode().str
 
 
 def run_command(cmd: str, default_result: str = '0', debug_print: bool = False) -> Tuple[bool, str]:
+    """
+    `stderr` is merged with `stdout`
+
+    Returns:
+        Tuple of [status, output]
+    """
     # REFER: Context-Search-fms
     if debug_print:
         print(f'DEBUG: COMMAND: `{cmd}`')
@@ -47,8 +53,8 @@ def run_command(cmd: str, default_result: str = '0', debug_print: bool = False) 
         return True, output
     except Exception as e:
         print(f'EXCEPTION OCCURRED (cmd=`{cmd}`), will return default_result ("{default_result}") as the output')
-    # print(e)
-    # print(traceback.format_exc())
+        # print(e)
+        # print(traceback.format_exc())
     if debug_print:
         print(default_result)
     return False, default_result
