@@ -278,7 +278,7 @@ def update_settings(args: argparse.Namespace):
     g_logger.debug(f"Input file md5 = '{g_auto_executor_settings.data_file_md5_hash}'")
 
     g_auto_executor_settings.set_execution_time_limit(seconds=args.time)
-    g_logger.debug(f'Execution Time = {g_auto_executor_settings.EXECUTION_TIME_LIMIT // 60 // 60:02}:'
+    g_logger.debug(f'Solver Execution Timelimit = {g_auto_executor_settings.EXECUTION_TIME_LIMIT // 60 // 60:02}:'
                    f'{(g_auto_executor_settings.EXECUTION_TIME_LIMIT // 60) % 60:02}:'
                    f'{g_auto_executor_settings.EXECUTION_TIME_LIMIT % 60:02}')
 
