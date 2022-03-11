@@ -296,10 +296,19 @@ def update_settings(args: argparse.Namespace):
     g_logger.debug(f'CPU_CORES_PER_SOLVER = {g_auto_executor_settings.CPU_CORES_PER_SOLVER}')
 
     if args.jobs == 0:
+        g_auto_executor_settings.MAX_PARALLEL_SOLVERS = len(g_auto_executor_settings.solver_model_combinations)
+    elif args.jobs == -1:
         g_auto_executor_settings.MAX_PARALLEL_SOLVERS = run_command_get_output('nproc')
     else:
         g_auto_executor_settings.MAX_PARALLEL_SOLVERS = args.jobs
     g_logger.debug(f'MAX_PARALLEL_SOLVERS = {g_auto_executor_settings.MAX_PARALLEL_SOLVERS}')
+    if g_auto_executor_settings.MAX_PARALLEL_SOLVERS < len(g_auto_executor_settings.solver_model_combinations):
+        # TODO: Add more clear warning message explaining the technique used to get the results
+        #       Result = Return the best result found in `EXECUTION_TIME_LIMIT` time among all solver model combinations.
+        #                If no result is found, then wait until the first result is found and then return it.
+        g_logger.warning('There is a possibility of more time being spent on execution'
+                         'as all solver model combinations will not be running in parallel.'
+                         f'\nSolver Model Combinations = {len(g_auto_executor_settings.solver_model_combinations)}')
 
 
 # REFER: https://stackoverflow.com/questions/1265665/how-can-i-check-if-a-string-represents-an-int-without-using-try-except
@@ -355,8 +364,8 @@ def parser_check_jobs_int_range(c: str) -> int:
     if not c.isdigit():
         raise argparse.ArgumentTypeError(f"invalid int value: '{c}'")
     val = int(c)
-    if val < 0:
-        raise argparse.ArgumentTypeError('minimum `N` is 0')
+    if val < -1:
+        raise argparse.ArgumentTypeError('minimum `N` is -1')
     return val
 
 
@@ -431,8 +440,10 @@ if __name__ == '__main__':
                            type=parser_check_jobs_int_range,
                            default=0,
                            help='Set maximum number of instances of solvers that can execute in parallel [default: 0]'
-                                '\nRequirement: N >= 0'
-                                '\nNote:\n  • N=0 -> `nproc` or `len(os.sched_getaffinity(0))`')
+                                '\nRequirement: N >= -1'
+                                '\nNote:'
+                                '\n  • N=0 -> Number of solver model combinations due to `--solver-models` parameter'
+                                '\n  • N=-1 -> `nproc` or `len(os.sched_getaffinity(0))`')
 
     my_parser.add_argument('--debug',
                            action='store_true',
