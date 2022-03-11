@@ -278,7 +278,7 @@ def update_settings(args: argparse.Namespace):
                 ))
     g_logger.debug(f'Solver Model Combinations = {g_auto_executor_settings.solver_model_combinations}')
 
-    g_auto_executor_settings.CPU_CORES_PER_SOLVER = args.threads_per_solver_instance
+    g_auto_executor_settings.set_cpu_cores_per_solver(args.threads_per_solver_instance)
     g_logger.debug(f'CPU_CORES_PER_SOLVER = {g_auto_executor_settings.CPU_CORES_PER_SOLVER}')
 
     if args.jobs == 0:
