@@ -15,15 +15,20 @@ g_logger = logging.getLogger('CNC')
 # ---
 
 # NOTE
+#   1. The prefix 'g_' denotes that it is a global variable
+
 # Assumptions
-#   1. Linux OS is used for execution
-#   2. `bash`, `which`, `nproc`, `tmux` are installed
-#   3. Execution is done from "mtp" folder
+#   1. Execution is done from "mtp" folder
+#   2. Linux OS is used for execution
+#   3. `bash`, `which`, `nproc`, `tmux` are installed
+#   4. Python lib `rich` is installed
+#   5. AMPL, Baron, Octeract are installed and properly configure
+#   6. Model files are present at the right place
 
 # ---
 
 # REFER: https://stackoverflow.com/questions/3172470/actual-meaning-of-shell-true-in-subprocess
-BASH_PATH = subprocess.check_output(['which', 'bash'], shell=False).decode().strip()
+g_BASH_PATH = subprocess.check_output(['which', 'bash'], shell=False).decode().strip()
 
 
 def run_command(cmd: str, default_result: str = '0', debug_print: bool = False) -> Tuple[bool, str]:
@@ -34,6 +39,7 @@ def run_command(cmd: str, default_result: str = '0', debug_print: bool = False) 
         Tuple of [status, output]
     """
     # REFER: Context-Search-fms
+    global g_BASH_PATH
     if debug_print:
         print(f'DEBUG: COMMAND: `{cmd}`')
     try:
@@ -44,7 +50,7 @@ def run_command(cmd: str, default_result: str = '0', debug_print: bool = False) 
         #       The error logs of testing has been put in "REPO/logs/2022-01-22_ssh_kill_errors.txt"
         # status_code, output = subprocess.getstatusoutput(cmd)
         output = subprocess.check_output(
-            [BASH_PATH, '-c', cmd],
+            [g_BASH_PATH, '-c', cmd],
             stderr=subprocess.STDOUT,
             shell=False
         ).decode().strip()
