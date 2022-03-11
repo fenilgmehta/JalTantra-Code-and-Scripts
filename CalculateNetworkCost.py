@@ -31,7 +31,7 @@ g_logger = logging.getLogger('CNC')
 g_BASH_PATH = subprocess.check_output(['which', 'bash'], shell=False).decode().strip()
 
 
-def run_command(cmd: str, default_result: str = '0', debug_print: bool = False) -> Tuple[bool, str]:
+def run_command(cmd: str, default_result: str = '', debug_print: bool = False) -> Tuple[bool, str]:
     """
     `stderr` is merged with `stdout`
 
@@ -67,7 +67,7 @@ def run_command(cmd: str, default_result: str = '0', debug_print: bool = False) 
 
 
 def run_command_get_output(cmd: str, debug_print: bool = False) -> str:
-    return run_command(cmd, debug_print=debug_print)[1]
+    return run_command(cmd, '0', debug_print)[1]
 
 
 # ---
@@ -94,7 +94,7 @@ def get_free_swap() -> float:
 def get_execution_time(pid: Union[int, str]) -> int:
     """returns: execution time in seconds"""
     # REFER: https://unix.stackexchange.com/questions/7870/how-to-check-how-long-a-process-has-been-running
-    success, output = run_command(f'ps -o etimes= -p "{pid}"')
+    success, output = run_command(f'ps -o etimes= -p "{pid}"', '0')
     if success:
         return int(output)
     return 10 ** 15  # ~3.17 crore years
@@ -209,15 +209,16 @@ def time_memory_monitor_and_stopper(
             for i_bashpid in pids_to_monitor:
                 if get_execution_time(i_bashpid) >= execution_time_limit:
                     # NOTE: only SIGINT signal does proper termination of the octeract-engine
-                    print(run_command_get_output("pstree -ap " + str(i_bashpid), debug_print=True))
-                    print(run_command_get_output("pstree -ap " + str(i_bashpid)
-                                                 + f" | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # Time"))
-                    print(run_command_get_output("pstree -aps " + str(i_bashpid)
-                                                 + f" | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # Time"))
-                    success, pid = run_command("pstree -ap " + str(i_bashpid)
-                                               + f" | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+' | "
-                                                 f"grep -oE '[0-9]+'  # Time Monitor",
-                                               debug_print=True)
+                    print(run_command_get_output(f"pstree -ap {i_bashpid}  # Time 1", debug_print=True))
+                    print(run_command_get_output(f"pstree -ap {i_bashpid} | "
+                                                 f"grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # Time 2"))
+                    print(run_command_get_output(f"pstree -aps {i_bashpid} | "
+                                                 f"grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # Time 3"))
+                    success, pid = run_command(f"pstree -ap {i_bashpid} | "
+                                               f"grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+' | "
+                                               f"grep -oE '[0-9]+'  # Time Monitor 4",
+                                               '0',
+                                               True)
                     pids_finished.append(i_bashpid)
                     to_run_the_loop = False
                     if success:
@@ -231,14 +232,15 @@ def time_memory_monitor_and_stopper(
         if get_free_ram() <= min_free_ram:
             # Kill the oldest executing octeract instance used to solve data+model combination
             bashpid_tokill = sorted([(get_execution_time(p), p) for p in pids_to_monitor], reverse=True)[0][1]
-            print(run_command_get_output("pstree -ap " + str(bashpid_tokill)
-                                         + f" | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # RAM"))
-            print(run_command_get_output("pstree -aps " + str(bashpid_tokill)
-                                         + f" | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # RAM"))
-            success, pid = run_command("pstree -ap " + str(bashpid_tokill)
-                                       + f" | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+' | "
-                                         f"grep -oE '[0-9]+'  # RAM Monitor",
-                                       debug_print=True)
+            print(run_command_get_output(f"pstree -ap {bashpid_tokill} | "
+                                         f"grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # RAM 1"))
+            print(run_command_get_output(f"pstree -aps {bashpid_tokill} | "
+                                         f"grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # RAM 2"))
+            success, pid = run_command(f"pstree -ap {bashpid_tokill} | "
+                                       f"grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+' | "
+                                       f"grep -oE '[0-9]+'  # RAM Monitor 3",
+                                       '0',
+                                       True)
             pids_to_monitor.remove(bashpid_tokill)
             if success:
                 print(run_command_get_output(f'kill -s SIGINT {pid}  # RAM Monitor', True))
