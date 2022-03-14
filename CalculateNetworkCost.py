@@ -205,7 +205,7 @@ class AutoExecutorSettings:
         self.output_dir = './NetworkResults/'.rstrip('/')  # Note: Do not put trailing forward slash ('/')
         self.output_data_dir = f'{self.output_dir}/SolutionData'
         self.models_dir = "./Files/Models"  # m1, m3 => q   ,   m2, m4 => q1, q2
-        self.solvers = {}
+        self.solvers: Dict[str, Dict[str, Union[str, List]]] = {}
         self.__update_solver_dict()
 
         # Tuples of (Solver name & Model name) which are to be executed to
@@ -238,11 +238,13 @@ class AutoExecutorSettings:
                 'engine_options': f'option baron_options "maxtime={self.EXECUTION_TIME_LIMIT - 10} '
                                   f'threads={self.CPU_CORES_PER_SOLVER} barstats keepsol lsolmsg '
                                   f'outlev=1 prfreq=100 prtime=2 problem";',
-                'process_name_to_stop_using_ctrl_c': 'baron'
+                'process_name_to_stop_using_ctrl_c': 'baron'  # For 1 core and multi core, same process is to be stopped
             },
             'octeract': {
                 'engine_path': './octeract-engine-4.0.0/bin/octeract-engine',
                 'engine_options': f'options octeract_options "num_cores={self.CPU_CORES_PER_SOLVER}";',
+                # For 1 core, process with name 'octeract-engine' is the be stopped using Control+C
+                # For multi core, process with name 'mpirun' is the be stopped using Control+C
                 'process_name_to_stop_using_ctrl_c': 'mpirun' if self.CPU_CORES_PER_SOLVER > 1 else 'octeract-engine'
             }
         }
