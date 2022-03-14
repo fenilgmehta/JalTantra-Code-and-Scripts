@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import logging
 import os
+import pathlib
 import subprocess
 import sys
 import time
@@ -151,6 +152,38 @@ def file_md5(file_path) -> str:
 
 
 # ---
+
+class NetworkExecutionInformation:
+    def __init__(self, aes: 'AutoExecutorSettings', idx: int):
+        """
+        This constructor will set all data members except `self.tmux_bash_pid`
+        """
+        global g_logger
+
+        self.tmux_bash_pid: Union[str, None] = None  # This has to be set manually
+        self.idx: int = idx
+        self.solver_name, self.model_name = aes.solver_model_combinations[idx]
+
+        # REFER: https://stackoverflow.com/a/66771847
+        self.short_uniq_model_name: str = self.model_name[:self.model_name.find('_')]
+        # REFER: https://github.com/tmux/tmux/issues/3113
+        #        Q. What is the maximum length of session name that can be set using
+        #           the following command: `tmux new -s 'SessionName_12345'`
+        #        A. There is no defined limit.
+        self.short_uniq_data_file_name: str = aes.data_file_md5_hash
+        self.short_uniq_combination: str = f'{self.short_uniq_model_name}_{self.short_uniq_data_file_name}'
+        g_logger.debug(self.short_uniq_model_name, self.short_uniq_data_file_name, self.short_uniq_combination)
+
+        self.models_dir: str = aes.models_dir
+        self.data_file_path: str = aes.data_file_path
+        self.engine_path: str = aes.solvers[self.solver_name]['engine_path']
+        self.engine_options: str = aes.solvers[self.solver_name]['engine_options']
+        self.output_dir: pathlib.Path = pathlib.Path(aes.output_dir) / self.short_uniq_combination
+
+    def __str__(self):
+        return f'[pid={self.tmux_bash_pid}, idx={self.idx}, solver={self.solver_name}, ' \
+               f'model={self.short_uniq_model_name}]'
+
 
 class AutoExecutorSettings:
     AVAILABLE_SOLVERS = ['baron', 'octeract']
