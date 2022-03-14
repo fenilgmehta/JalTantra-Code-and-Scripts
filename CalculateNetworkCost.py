@@ -73,7 +73,7 @@ def run_command(cmd: str, default_result: str = '', debug_print: bool = False) -
     return False, default_result
 
 
-def run_command_get_output(cmd: str, debug_print: bool = False) -> str:
+def run_command_get_output(cmd: str, default_result: str = '0', debug_print: bool = False) -> str:
     """
     The return value in case of unsuccessful execution of command `cmd` is '0', because sometimes we have used
     this method to get PID of some process and used kill command to send some signal (SIGINT in most cases) to
@@ -94,10 +94,10 @@ def run_command_get_output(cmd: str, debug_print: bool = False) -> str:
              /bin/kill
 
     Returns:
-        The return value is '0' if the command `cmd` exits with a non-zero exit code.
+        The return value is `default_result` (or '0') if the command `cmd` exits with a non-zero exit code.
         If command `cmd` executes successfully, then stdout and stderr are merged and returned as one string
     """
-    return run_command(cmd, '0', debug_print)[1]
+    return run_command(cmd, default_result, debug_print)[1]
 
 
 # ---
@@ -249,7 +249,7 @@ def time_memory_monitor_and_stopper(
                     pids_finished.append(i_bashpid)
                     to_run_the_loop = False
                     if success:
-                        print(run_command_get_output(f'kill -s SIGINT {pid}  # Time Monitor', True))
+                        print(run_command_get_output(f'kill -s SIGINT {pid}  # Time Monitor', debug_print=True))
                     else:
                         print(f'DEBUG: TIME_LIMIT: tmux session (with bash PID={i_bashpid}) already finished')
                     time.sleep(2)
@@ -270,7 +270,7 @@ def time_memory_monitor_and_stopper(
                                        True)
             pids_to_monitor.remove(bashpid_tokill)
             if success:
-                print(run_command_get_output(f'kill -s SIGINT {pid}  # RAM Monitor', True))
+                print(run_command_get_output(f'kill -s SIGINT {pid}  # RAM Monitor', debug_print=True))
             else:
                 print(f'DEBUG: RAM_USAGE: tmux session (with bash PID={bashpid_tokill}) already finished')
             time.sleep(2)
