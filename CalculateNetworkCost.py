@@ -249,8 +249,34 @@ class AutoExecutorSettings:
             }
         }
 
+    def start_solver(self, idx: int) -> NetworkExecutionInformation:
+        info = NetworkExecutionInformation(self, idx)
 
-g_auto_executor_settings = AutoExecutorSettings()
+        info.output_dir.mkdir(exist_ok=True)
+        if not info.output_dir.exists():
+            g_logger.warning(f"Some directory(s) do not exist in the path: '{info.output_dir.resolve()}'")
+            info.output_dir.mkdir(parents=True, exist_ok=True)
+
+        # NOTE: The order of > and 2>&1 matters in the below command
+        run_command_get_output(rf'''
+            tmux new-session -d -s '{self.TMUX_UNIQUE_PREFIX}{info.short_uniq_combination}' 'echo $$ > /tmp/pid_{info.short_uniq_combination}.txt ; {self.AMPL_PATH} > "{info.output_dir.resolve()}/std_out_err_{info.short_uniq_combination}.txt" 2>&1 <<EOF
+                reset;
+                model "{info.models_dir}/{info.model_name}";
+                data "{info.data_file_path}";
+                option solver "{info.engine_path}";
+                {info.engine_options};
+                solve;
+                display _total_solve_time;
+                display l;
+                display {"q1,q2" if (info.short_uniq_model_name in ("m2", "m4")) else "q"};
+            EOF'
+        ''')
+
+        info.tmux_bash_pid = run_command_get_output(f'cat "/tmp/pid_{info.short_uniq_combination}.txt"')
+        return info
+
+
+g_settings = AutoExecutorSettings()
 
 
 # ---
