@@ -124,10 +124,7 @@ def get_free_swap() -> float:
 def get_execution_time(pid: Union[int, str]) -> int:
     """returns: execution time in seconds"""
     # REFER: https://unix.stackexchange.com/questions/7870/how-to-check-how-long-a-process-has-been-running
-    success, output = run_command(f'ps -o etimes= -p "{pid}"', '0')
-    if success:
-        return int(output)
-    return 10 ** 15  # ~3.17 crore years
+    return int(run_command(f'ps -o etimes= -p "{pid}"', str(10 ** 15))[1])  # 10**15 seconds == ~3.17 crore years
 
 
 def file_md5(file_path) -> str:
