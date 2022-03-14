@@ -186,8 +186,12 @@ class NetworkExecutionInformation:
 
 
 class AutoExecutorSettings:
+    # Please ensure that proper escaping of white spaces and other special characters
+    # is done because this will be executed in a fashion similar to `./a.out`
+    AMPL_PATH = './ampl.linux-intel64/ampl'
     AVAILABLE_SOLVERS = ['baron', 'octeract']
     AVAILABLE_MODELS = {1: 'm1_basic.R', 2: 'm2_basic2_v2.R', 3: 'm3_descrete_segment.R', 4: 'm4_parallel_links.R'}
+    TMUX_UNIQUE_PREFIX = f'AR_NC_{os.getpid()}_'  # AR = Auto Run, NC = Network Cost
 
     def __init__(self):
         self.CPU_CORES_PER_SOLVER = 1
