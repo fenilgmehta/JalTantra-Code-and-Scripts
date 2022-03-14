@@ -16,14 +16,21 @@ g_logger = logging.getLogger('CNC')
 
 # NOTE
 #   1. The prefix 'g_' denotes that it is a global variable
+#   2. 'pid_' and '.txt' are the prefix and suffix respectively
+#      for text file having PID of the bash running inside tmux.
+#   3. 'std_out_err_' and '.txt' are the prefix and suffix respectively for the text file
+#      having the merged content of `stdout` and `stderr` stream of the tmux session which
+#      runs the solver.
+#   4. Tmux session prefix is 'AR_NC_'
+
 
 # Assumptions
-#   1. Execution is done from "mtp" folder
-#   2. Linux OS is used for execution
-#   3. `bash`, `which`, `nproc`, `tmux` are installed
-#   4. Python lib `rich` is installed
-#   5. AMPL, Baron, Octeract are installed and properly configure
-#   6. Model files are present at the right place
+#   1. Linux OS is used for execution
+#   2. `bash`, `which`, `nproc`, `tmux` are installed
+#   3. Python lib `rich` is installed
+#   4. AMPL, Baron, Octeract are installed and properly configure
+#      (Execution is done from "mtp" directory or any other directory with the same directory structure)
+#   5. Model files are present at the right place
 
 # ---
 
