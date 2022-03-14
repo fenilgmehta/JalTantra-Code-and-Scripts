@@ -74,6 +74,29 @@ def run_command(cmd: str, default_result: str = '', debug_print: bool = False) -
 
 
 def run_command_get_output(cmd: str, debug_print: bool = False) -> str:
+    """
+    The return value in case of unsuccessful execution of command `cmd` is '0', because sometimes we have used
+    this method to get PID of some process and used kill command to send some signal (SIGINT in most cases) to
+    that PID. If the command `cmd` which is used to find the PID of the target process fails, then in that case
+    we return '0' so that kill command does not send the signal to any random process, instead it sends the
+    signal to itself. Thus saving us from having to write `if` conditions which verify whether the PID is valid
+    or not before executing the `kill` command.
+
+    The `kill` commands differs with situation:
+        1. kill --help
+             (dev) ➜  ~ which kill
+             kill: shell built-in command
+        2. /bin/kill --help
+             (dev) ➜  ~ env which kill      
+             /bin/kill
+        3. bash -c 'kill --help' (This has been used in this script)
+             (dev) ➜  ~ bash -c 'which kill' 
+             /bin/kill
+
+    Returns:
+        The return value is '0' if the command `cmd` exits with a non-zero exit code.
+        If command `cmd` executes successfully, then stdout and stderr are merged and returned as one string
+    """
     return run_command(cmd, '0', debug_print)[1]
 
 
