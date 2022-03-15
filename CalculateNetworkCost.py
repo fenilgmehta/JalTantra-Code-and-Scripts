@@ -348,7 +348,7 @@ def main():
 
 
 def update_settings(args: argparse.Namespace):
-    global g_logger, g_auto_executor_settings
+    global g_logger, g_settings
 
     # noinspection PyArgumentList
     logging.basicConfig(
@@ -364,43 +364,43 @@ def update_settings(args: argparse.Namespace):
     if not os.path.exists(args.path):
         print(f"Cannot access '{args.path}': No such file or directory")
         exit(1)
-    g_auto_executor_settings.data_file_path = args.path
-    g_auto_executor_settings.data_file_md5_hash = file_md5(args.path)
-    g_logger.debug(f"Graph/Network (i.e. Data/Testcase file) = '{g_auto_executor_settings.data_file_path}'")
-    g_logger.debug(f"Input file md5 = '{g_auto_executor_settings.data_file_md5_hash}'")
+    g_settings.data_file_path = args.path
+    g_settings.data_file_md5_hash = file_md5(args.path)
+    g_logger.debug(f"Graph/Network (i.e. Data/Testcase file) = '{g_settings.data_file_path}'")
+    g_logger.debug(f"Input file md5 = '{g_settings.data_file_md5_hash}'")
 
-    g_auto_executor_settings.set_execution_time_limit(seconds=args.time)
-    g_logger.debug(f'Solver Execution Timelimit = {g_auto_executor_settings.EXECUTION_TIME_LIMIT // 60 // 60:02}:'
-                   f'{(g_auto_executor_settings.EXECUTION_TIME_LIMIT // 60) % 60:02}:'
-                   f'{g_auto_executor_settings.EXECUTION_TIME_LIMIT % 60:02}')
+    g_settings.set_execution_time_limit(seconds=args.time)
+    g_logger.debug(f'Solver Execution Timelimit = {g_settings.EXECUTION_TIME_LIMIT // 60 // 60:02}:'
+                   f'{(g_settings.EXECUTION_TIME_LIMIT // 60) % 60:02}:'
+                   f'{g_settings.EXECUTION_TIME_LIMIT % 60:02}')
 
     for solver_model_numbers_list in args.solver_models:
         for solver_model_numbers in solver_model_numbers_list:
             splitted_txt = solver_model_numbers.split()
             solver_name, model_numbers = splitted_txt[0], splitted_txt[1:]
             for i in model_numbers:
-                g_auto_executor_settings.solver_model_combinations.append((
+                g_settings.solver_model_combinations.append((
                     solver_name, AutoExecutorSettings.AVAILABLE_MODELS[int(i)]
                 ))
-    g_logger.debug(f'Solver Model Combinations = {g_auto_executor_settings.solver_model_combinations}')
+    g_logger.debug(f'Solver Model Combinations = {g_settings.solver_model_combinations}')
 
-    g_auto_executor_settings.set_cpu_cores_per_solver(args.threads_per_solver_instance)
-    g_logger.debug(f'CPU_CORES_PER_SOLVER = {g_auto_executor_settings.CPU_CORES_PER_SOLVER}')
+    g_settings.set_cpu_cores_per_solver(args.threads_per_solver_instance)
+    g_logger.debug(f'CPU_CORES_PER_SOLVER = {g_settings.CPU_CORES_PER_SOLVER}')
 
     if args.jobs == 0:
-        g_auto_executor_settings.MAX_PARALLEL_SOLVERS = len(g_auto_executor_settings.solver_model_combinations)
+        g_settings.MAX_PARALLEL_SOLVERS = len(g_settings.solver_model_combinations)
     elif args.jobs == -1:
-        g_auto_executor_settings.MAX_PARALLEL_SOLVERS = run_command_get_output('nproc')
+        g_settings.MAX_PARALLEL_SOLVERS = run_command_get_output('nproc')
     else:
-        g_auto_executor_settings.MAX_PARALLEL_SOLVERS = args.jobs
-    g_logger.debug(f'MAX_PARALLEL_SOLVERS = {g_auto_executor_settings.MAX_PARALLEL_SOLVERS}')
-    if g_auto_executor_settings.MAX_PARALLEL_SOLVERS < len(g_auto_executor_settings.solver_model_combinations):
+        g_settings.MAX_PARALLEL_SOLVERS = args.jobs
+    g_logger.debug(f'MAX_PARALLEL_SOLVERS = {g_settings.MAX_PARALLEL_SOLVERS}')
+    if g_settings.MAX_PARALLEL_SOLVERS < len(g_settings.solver_model_combinations):
         # TODO: Add more clear warning message explaining the technique used to get the results
         #       Result = Return the best result found in `EXECUTION_TIME_LIMIT` time among all solver model combinations.
         #                If no result is found, then wait until the first result is found and then return it.
         g_logger.warning('There is a possibility of more time being spent on execution'
                          'as all solver model combinations will not be running in parallel.'
-                         f'\nSolver Model Combinations = {len(g_auto_executor_settings.solver_model_combinations)}')
+                         f'\nSolver Model Combinations = {len(g_settings.solver_model_combinations)}')
 
 
 # REFER: https://stackoverflow.com/questions/1265665/how-can-i-check-if-a-string-represents-an-int-without-using-try-except
