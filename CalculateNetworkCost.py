@@ -16,13 +16,15 @@ g_logger = logging.getLogger('CNC')
 # ---
 
 # NOTE
-#   1. The prefix 'g_' denotes that it is a global variable
+#   1. The prefix 'g_' denotes that it is a global variable.
+#      The prefix 'fn_' denotes that the variable stores a function.
 #   2. 'pid_' and '.txt' are the prefix and suffix respectively
 #      for text file having PID of the bash running inside tmux.
 #   3. 'std_out_err_' and '.txt' are the prefix and suffix respectively for the text file
 #      having the merged content of `stdout` and `stderr` stream of the tmux session which
 #      runs the solver.
-#   4. Tmux session prefix is 'AR_NC_'
+#   4. Tmux session prefix is 'AR_NC_'.
+#   5. For naming files, always try to just use alpha-numeric letters and underscore ('_') only.
 
 
 # Assumptions
