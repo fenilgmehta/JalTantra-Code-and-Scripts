@@ -191,6 +191,43 @@ class NetworkExecutionInformation:
                f'model={self.short_uniq_model_name}]'
 
 
+class SolverInformation:
+    def __init__(self, engine_path: str, engine_options: str, process_name_to_stop_using_ctrl_c: str,
+                 fn_check_solution_found):
+        """
+        Args:
+            engine_path: Path to the solver that will be used by AMPL
+            engine_options: Solver specific parameters in AMPL format
+            process_name_to_stop_using_ctrl_c: Name of the process that is to be stopped using
+                                               Ctrl+C (i.e. SIGINT signal) such that solver smartly
+                                               gives us the best solution found till that moment
+            fn_check_solution_found: This should be a function that accepts a variable
+                                     of type `class NetworkExecutionInformation`
+        """
+        self.engine_path = engine_path
+        self.engine_options = engine_options
+        self.process_name_to_stop_using_ctrl_c = process_name_to_stop_using_ctrl_c
+        self.fn_check_solution_found = fn_check_solution_found
+
+    def check_solution_found(self, exec_info: NetworkExecutionInformation) -> bool:
+        """
+        Parses the output (stdout and stderr) of the solver and tells us
+        whether the solver has found any feasible solution or not
+
+        Args:
+            exec_info: NetworkExecutionInformation object having all information regarding the execution of the solver
+
+        Returns:
+             A boolean value telling whether the solver found any feasible solution or not
+        """
+        # REFER: https://stackoverflow.com/questions/42499656/pass-all-arguments-of-a-function-to-another-function
+        global g_logger
+        if self.fn_check_solution_found is None:
+            g_logger.error(f"`self.fn_check_solution_found` is `None` for self.engine_path='{self.engine_path}'")
+            return True
+        return self.fn_check_solution_found(exec_info)
+
+
 class AutoExecutorSettings:
     # Please ensure that proper escaping of white spaces and other special characters
     # is done because this will be executed in a fashion similar to `./a.out`
