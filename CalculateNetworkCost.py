@@ -299,6 +299,15 @@ class AutoExecutorSettings:
         }
 
     def start_solver(self, idx: int) -> NetworkExecutionInformation:
+        """
+        Launch the solver using `tmux` and `AMPL` in background (i.e. asynchronously / non-blocking)
+
+        Args:
+            idx: Index of `self.solver_model_combinations`
+
+        Returns:
+            `class NetworkExecutionInformation` object which has all the information regarding the execution
+        """
         info = NetworkExecutionInformation(self, idx)
 
         info.output_dir.mkdir(exist_ok=True)
