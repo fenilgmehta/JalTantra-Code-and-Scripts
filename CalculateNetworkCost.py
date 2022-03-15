@@ -186,6 +186,10 @@ class NetworkExecutionInformation:
         self.engine_options: str = aes.solvers[self.solver_name].engine_options
         self.output_dir: pathlib.Path = pathlib.Path(aes.output_dir) / self.short_uniq_combination
 
+        self.uniq_tmux_session_name: str = f'{aes.TMUX_UNIQUE_PREFIX}{self.short_uniq_combination}'
+        self.uniq_pid_file_path: str = f'/tmp/pid_{self.short_uniq_combination}.txt'
+        self.uniq_output_file_path: str = f'{self.output_dir.resolve()}/std_out_err_{self.short_uniq_combination}.txt'
+
     def __str__(self):
         return f'[pid={self.tmux_bash_pid}, idx={self.idx}, solver={self.solver_name}, ' \
                f'model={self.short_uniq_model_name}]'
@@ -304,7 +308,7 @@ class AutoExecutorSettings:
 
         # NOTE: The order of > and 2>&1 matters in the below command
         run_command_get_output(rf'''
-            tmux new-session -d -s '{self.TMUX_UNIQUE_PREFIX}{info.short_uniq_combination}' 'echo $$ > /tmp/pid_{info.short_uniq_combination}.txt ; {self.AMPL_PATH} > "{info.output_dir.resolve()}/std_out_err_{info.short_uniq_combination}.txt" 2>&1 <<EOF
+            tmux new-session -d -s '{info.uniq_tmux_session_name}' 'echo $$ > '{info.uniq_pid_file_path}' ; {self.AMPL_PATH} > '{info.uniq_output_file_path}' 2>&1 <<EOF
                 reset;
                 model "{info.models_dir}/{info.model_name}";
                 data "{info.data_file_path}";
