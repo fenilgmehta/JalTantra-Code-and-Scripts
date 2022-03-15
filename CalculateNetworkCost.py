@@ -117,19 +117,19 @@ def delete_last_lines(n=1):
 
 
 def get_free_ram() -> float:
-    """returns: free RAM in GiB"""
+    """Returns: free RAM in GiB"""
     # REFER: https://stackoverflow.com/questions/34937580/get-available-memory-in-gb-using-single-bash-shell-command/34938001
     return float(run_command_get_output(r'''awk '/MemFree/ { printf "%.3f \n", $2/1024/1024 }' /proc/meminfo'''))
 
 
 def get_free_swap() -> float:
-    """returns: free Swap in GiB"""
+    """Returns: free Swap in GiB"""
     # REFER: https://stackoverflow.com/questions/34937580/get-available-memory-in-gb-using-single-bash-shell-command/34938001
     return float(run_command_get_output(r'''awk '/SwapFree/ { printf "%.3f \n", $2/1024/1024 }' /proc/meminfo'''))
 
 
 def get_execution_time(pid: Union[int, str]) -> int:
-    """returns: execution time in seconds"""
+    """Returns: execution time in seconds"""
     # REFER: https://unix.stackexchange.com/questions/7870/how-to-check-how-long-a-process-has-been-running
     return int(run_command(f'ps -o etimes= -p "{pid}"', str(10 ** 15))[1])  # 10**15 seconds == ~3.17 crore years
 
