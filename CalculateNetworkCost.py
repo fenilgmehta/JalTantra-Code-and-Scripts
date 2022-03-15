@@ -32,6 +32,9 @@ g_logger = logging.getLogger('CNC')
 #   4. AMPL, Baron, Octeract are installed and properly configure
 #      (Execution is done from "mtp" directory or any other directory with the same directory structure)
 #   5. Model files are present at the right place
+#   6. There is no limitation on the amount of available RAM (This assumption make the program simpler.
+#      However, in future, it may be removed during deployment to make sure the solvers runs at optimal
+#      speed - accordingly changes need to be done in this program)
 
 # ---
 
