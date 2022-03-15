@@ -47,9 +47,9 @@ def run_command(cmd: str, default_result: str = '', debug_print: bool = False) -
         Tuple of [status, output]
     """
     # REFER: Context-Search-fms
-    global g_BASH_PATH
+    global g_logger, g_BASH_PATH
     if debug_print:
-        print(f'DEBUG: COMMAND: `{cmd}`')
+        g_logger.debug(f'COMMAND: `{cmd}`')
     try:
         # NOTE: Not using the below line of code because "sh" shell does not seem to properly parse the command
         #       Example: `kill -s SIGINT 12345`
@@ -63,14 +63,15 @@ def run_command(cmd: str, default_result: str = '', debug_print: bool = False) -
             shell=False
         ).decode().strip()
         if debug_print:
-            print(output)
+            g_logger.debug(output)
         return True, output
     except Exception as e:
-        print(f'EXCEPTION OCCURRED (cmd=`{cmd}`), will return default_result ("{default_result}") as the output')
-        # print(e)
-        # print(traceback.format_exc())
+        g_logger.warning(f'EXCEPTION OCCURRED (cmd=`{cmd}`), will return '
+                         f'default_result ("{default_result}") as the output')
+        # g_logger.warning(e)
+        # g_logger.warning(traceback.format_exc())
     if debug_print:
-        print(default_result)
+        g_logger.debug(default_result)
     return False, default_result
 
 
@@ -217,7 +218,7 @@ class AutoExecutorSettings:
 
     def set_execution_time_limit(self, hours: int = None, minutes: int = None, seconds: int = None) -> None:
         if (hours, minutes, seconds).count(None) == 3:
-            print('At least one value should be non-None to update EXECUTION_TIME_LIMIT')
+            g_logger.warning('At least one value should be non-None to update EXECUTION_TIME_LIMIT')
             return
         hours = 0 if hours is None else hours
         minutes = 0 if minutes is None else minutes
@@ -300,12 +301,14 @@ def time_memory_monitor_and_stopper(
         if execution_time_limit > 0:
             for i_bashpid in pids_to_monitor:
                 if get_execution_time(i_bashpid) >= execution_time_limit:
-                    # NOTE: only SIGINT signal does proper termination of the octeract-engine
-                    print(run_command_get_output(f"pstree -ap {i_bashpid}  # Time 1", debug_print=True))
-                    print(run_command_get_output(f"pstree -ap {i_bashpid} | "
-                                                 f"grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # Time 2"))
-                    print(run_command_get_output(f"pstree -aps {i_bashpid} | "
-                                                 f"grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # Time 3"))
+                    # NOTE: only SIGINT signal (i.e. Ctrl+C) does proper termination of the octeract-engine
+                    g_logger.debug(run_command_get_output(f"pstree -ap {i_bashpid}  # Time 1", debug_print=True))
+                    g_logger.debug(run_command_get_output(
+                        f"pstree -ap {i_bashpid} | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # Time 2"
+                    ))
+                    g_logger.debug(run_command_get_output(
+                        f"pstree -aps {i_bashpid} | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # Time 3"
+                    ))
                     success, pid = run_command(f"pstree -ap {i_bashpid} | "
                                                f"grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+' | "
                                                f"grep -oE '[0-9]+'  # Time Monitor 4",
@@ -314,9 +317,9 @@ def time_memory_monitor_and_stopper(
                     pids_finished.append(i_bashpid)
                     to_run_the_loop = False
                     if success:
-                        print(run_command_get_output(f'kill -s SIGINT {pid}  # Time Monitor', debug_print=True))
+                        g_logger.info(run_command_get_output(f'kill -s SIGINT {pid}  # Time Monitor', debug_print=True))
                     else:
-                        print(f'DEBUG: TIME_LIMIT: tmux session (with bash PID={i_bashpid}) already finished')
+                        g_logger.info(f'TIME_LIMIT: tmux session (with bash PID={i_bashpid}) already finished')
                     time.sleep(2)
             for i_bashpid in pids_finished:
                 pids_to_monitor.remove(i_bashpid)
@@ -324,10 +327,12 @@ def time_memory_monitor_and_stopper(
         if get_free_ram() <= min_free_ram:
             # Kill the oldest executing octeract instance used to solve data+model combination
             bashpid_tokill = sorted([(get_execution_time(p), p) for p in pids_to_monitor], reverse=True)[0][1]
-            print(run_command_get_output(f"pstree -ap {bashpid_tokill} | "
-                                         f"grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # RAM 1"))
-            print(run_command_get_output(f"pstree -aps {bashpid_tokill} | "
-                                         f"grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # RAM 2"))
+            g_logger.debug(run_command_get_output(
+                f"pstree -ap {bashpid_tokill} | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # RAM 1"
+            ))
+            g_logger.debug(run_command_get_output(
+                f"pstree -aps {bashpid_tokill} | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # RAM 2"
+            ))
             success, pid = run_command(f"pstree -ap {bashpid_tokill} | "
                                        f"grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+' | "
                                        f"grep -oE '[0-9]+'  # RAM Monitor 3",
@@ -335,9 +340,9 @@ def time_memory_monitor_and_stopper(
                                        True)
             pids_to_monitor.remove(bashpid_tokill)
             if success:
-                print(run_command_get_output(f'kill -s SIGINT {pid}  # RAM Monitor', debug_print=True))
+                g_logger.info(run_command_get_output(f'kill -s SIGINT {pid}  # RAM Monitor', debug_print=True))
             else:
-                print(f'DEBUG: RAM_USAGE: tmux session (with bash PID={bashpid_tokill}) already finished')
+                g_logger.info(f'RAM_USAGE: tmux session (with bash PID={bashpid_tokill}) already finished')
             time.sleep(2)
             break
         time.sleep(2)
@@ -362,7 +367,7 @@ def update_settings(args: argparse.Namespace):
     g_logger.debug(args)
 
     if not os.path.exists(args.path):
-        print(f"Cannot access '{args.path}': No such file or directory")
+        g_logger.error(f"Cannot access '{args.path}': No such file or directory")
         exit(1)
     g_settings.data_file_path = args.path
     g_settings.data_file_md5_hash = file_md5(args.path)
