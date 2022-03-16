@@ -262,20 +262,6 @@ class AutoExecutorSettings:
         self.data_file_path: str = ''
         self.data_file_md5_hash: str = ''
 
-    def set_execution_time_limit(self, hours: int = None, minutes: int = None, seconds: int = None) -> None:
-        if (hours, minutes, seconds).count(None) == 3:
-            g_logger.warning('At least one value should be non-None to update EXECUTION_TIME_LIMIT')
-            return
-        hours = 0 if hours is None else hours
-        minutes = 0 if minutes is None else minutes
-        seconds = 0 if seconds is None else seconds
-        self.EXECUTION_TIME_LIMIT = (hours * 60 * 60) + (minutes * 60) + seconds
-        self.__update_solver_dict()
-
-    def set_cpu_cores_per_solver(self, n: int) -> None:
-        self.CPU_CORES_PER_SOLVER = n
-        self.__update_solver_dict()
-
     def __update_solver_dict(self):
         # NOTE: Update `AutoExecutorSettings.AVAILABLE_SOLVERS` if keys in below dictionary are updated
         # NOTE: Use double quotes ONLY in the below variables
@@ -297,6 +283,20 @@ class AutoExecutorSettings:
                 fn_check_solution_found=None
             )
         }
+
+    def set_execution_time_limit(self, hours: int = None, minutes: int = None, seconds: int = None) -> None:
+        if (hours, minutes, seconds).count(None) == 3:
+            g_logger.warning('At least one value should be non-None to update EXECUTION_TIME_LIMIT')
+            return
+        hours = 0 if hours is None else hours
+        minutes = 0 if minutes is None else minutes
+        seconds = 0 if seconds is None else seconds
+        self.EXECUTION_TIME_LIMIT = (hours * 60 * 60) + (minutes * 60) + seconds
+        self.__update_solver_dict()
+
+    def set_cpu_cores_per_solver(self, n: int) -> None:
+        self.CPU_CORES_PER_SOLVER = n
+        self.__update_solver_dict()
 
     def start_solver(self, idx: int) -> NetworkExecutionInformation:
         """
