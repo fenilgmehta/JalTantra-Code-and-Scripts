@@ -420,70 +420,71 @@ g_settings = AutoExecutorSettings()
 
 # ---
 
-def time_memory_monitor_and_stopper(
-        execution_time_limit: float,
-        min_free_ram: float,
-        pids_to_monitor: List[str],
-        pids_finished: List[str],
-        blocking: bool
-) -> None:
-    """
-    execution_time_limit: in seconds and ignored if <= 0
-    min_free_ram        : in GiB
-    blocking            : waiting until one of the PID in pids_to_monitor is stopped
-    """
-    global CPU_CORES_PER_SOLVER, process_name_to_stop_using_ctrl_c
-    to_run_the_loop = True
-    while to_run_the_loop:
-        to_run_the_loop = blocking
-        if execution_time_limit > 0:
-            for i_bashpid in pids_to_monitor:
-                if get_execution_time(i_bashpid) >= execution_time_limit:
-                    # NOTE: only SIGINT signal (i.e. Ctrl+C) does proper termination of the octeract-engine
-                    g_logger.debug(run_command_get_output(f"pstree -ap {i_bashpid}  # Time 1", debug_print=True))
-                    g_logger.debug(run_command_get_output(
-                        f"pstree -ap {i_bashpid} | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # Time 2"
-                    ))
-                    g_logger.debug(run_command_get_output(
-                        f"pstree -aps {i_bashpid} | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # Time 3"
-                    ))
-                    success, pid = run_command(f"pstree -ap {i_bashpid} | "
-                                               f"grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+' | "
-                                               f"grep -oE '[0-9]+'  # Time Monitor 4",
-                                               '0',
-                                               True)
-                    pids_finished.append(i_bashpid)
-                    to_run_the_loop = False
-                    if success:
-                        g_logger.info(run_command_get_output(f'kill -s SIGINT {pid}  # Time Monitor', debug_print=True))
-                    else:
-                        g_logger.info(f'TIME_LIMIT: tmux session (with bash PID={i_bashpid}) already finished')
-                    time.sleep(2)
-            for i_bashpid in pids_finished:
-                pids_to_monitor.remove(i_bashpid)
-            pids_finished.clear()
-        if get_free_ram() <= min_free_ram:
-            # Kill the oldest executing octeract instance used to solve data+model combination
-            bashpid_tokill = sorted([(get_execution_time(p), p) for p in pids_to_monitor], reverse=True)[0][1]
-            g_logger.debug(run_command_get_output(
-                f"pstree -ap {bashpid_tokill} | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # RAM 1"
-            ))
-            g_logger.debug(run_command_get_output(
-                f"pstree -aps {bashpid_tokill} | grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+'  # RAM 2"
-            ))
-            success, pid = run_command(f"pstree -ap {bashpid_tokill} | "
-                                       f"grep -oE '{process_name_to_stop_using_ctrl_c},[0-9]+' | "
-                                       f"grep -oE '[0-9]+'  # RAM Monitor 3",
-                                       '0',
-                                       True)
-            pids_to_monitor.remove(bashpid_tokill)
-            if success:
-                g_logger.info(run_command_get_output(f'kill -s SIGINT {pid}  # RAM Monitor', debug_print=True))
-            else:
-                g_logger.info(f'RAM_USAGE: tmux session (with bash PID={bashpid_tokill}) already finished')
+class MonitorAndStopper:
+    @staticmethod
+    def mas_time(
+            tmux_monitor_list: List[NetworkExecutionInformation],
+            tmux_finished_list: List[NetworkExecutionInformation],
+            execution_time_limit: float,
+            blocking: bool
+    ) -> None:
+        """
+        Monitor and stop solver instances based on the time for which they have been running on the system
+
+        Args:
+            tmux_monitor_list: List of Solver instances which are to be monitored
+            tmux_finished_list: List of Solver instances which have been stopped in this iteration (initially this will be empty)
+            execution_time_limit: Time in seconds. (This should be > 0)
+            blocking: Wait until one of the solver instance in `tmux_monitor_list` is stopped
+        """
+        if execution_time_limit <= 0.0:
+            g_logger.error(f'FIXME: `execution_time_limit` is not greater than 0')
+            return
+        # NOTE: It is the below TODO item which resulted in lots of changes
+        #       to the code and in turn improving the program structure :)
+        # TODO: Dynamically find the value of `process_name_to_stop_using_ctrl_c` based on solver name and PID
+        #       May have to update the `pids_to_monitor` list to store solver name along with the PID
+
+        # Index of elements of `tmux_monitor_list` which were/have stopped.
+        tmux_finished_list_idx: List[int] = list()
+        to_run_the_loop = True
+        while to_run_the_loop:
+            to_run_the_loop = blocking
+            for i, ne_info in enumerate(tmux_monitor_list):
+                if get_execution_time(ne_info.tmux_bash_pid) < execution_time_limit:
+                    continue
+                # NOTE: only SIGINT signal (i.e. Ctrl+C) does proper termination of the octeract-engine
+                g_logger.debug(run_command_get_output(
+                    f"pstree -ap {ne_info.tmux_bash_pid}  # Time 1", debug_print=True
+                ))
+                g_logger.debug(run_command_get_output(
+                    f"pstree -ap {ne_info.tmux_bash_pid} | "
+                    f"grep -oE '{ne_info.solver_info.process_name_to_stop_using_ctrl_c},[0-9]+'  # Time 2"
+                ))
+                g_logger.debug(run_command_get_output(
+                    f"pstree -aps {ne_info.tmux_bash_pid} | "
+                    f"grep -oE '{ne_info.solver_info.process_name_to_stop_using_ctrl_c},[0-9]+'  # Time 3"
+                ))
+                success, pid = run_command(
+                    f"pstree -ap {ne_info.tmux_bash_pid} | "
+                    f"grep -oE '{ne_info.solver_info.process_name_to_stop_using_ctrl_c},[0-9]+' | "
+                    f"grep -oE '[0-9]+'  # Time Monitor 4",
+                    '0',
+                    True
+                )
+                tmux_finished_list_idx.append(i)
+                tmux_finished_list.append(ne_info)
+                to_run_the_loop = False
+                if success:
+                    g_logger.info(run_command_get_output(f'kill -s SIGINT {pid}  # Time Monitor', debug_print=True))
+                else:
+                    g_logger.info(f'TIME_LIMIT: tmux session (with bash PID={ne_info.tmux_bash_pid}) already finished')
+                time.sleep(2)
+            for i in tmux_finished_list_idx[::-1]:
+                tmux_monitor_list.pop(i)
             time.sleep(2)
-            break
-        time.sleep(2)
+        g_logger.debug(f'{tmux_finished_list_idx=}')
+        pass
 
 
 def main():
