@@ -497,6 +497,74 @@ def check_solution_status(tmux_monitor_list: List[NetworkExecutionInformation]) 
 
 
 def main():
+    global g_logger, g_settings
+    run_command_get_output(f'mkdir -p "{g_settings.OUTPUT_DIR_LEVEL_0}"')
+    run_command_get_output(f'mkdir -p "{g_settings.OUTPUT_DIR_LEVEL_1_DATA}"')
+    run_command_get_output(f'mkdir -p "{g_settings.output_dir_level_1_network_specific}"')
+
+    tmux_monitor_list: List[NetworkExecutionInformation] = list()
+    tmux_finished_list: List[NetworkExecutionInformation] = list()
+
+    min_combination_parallel_solvers = min(
+        len(g_settings.solver_model_combinations),
+        g_settings.r_max_parallel_solvers
+    )
+
+    for i in range(min_combination_parallel_solvers):
+        exec_info = g_settings.start_solver(i)
+        tmux_monitor_list.append(exec_info)
+        g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
+        time.sleep(0.2)
+
+    # TODO: Problem: Handle case of deadlock like situation
+    #         1. `g_settings.solver_model_combinations > g_settings.MAX_PARALLEL_SOLVERS`
+    #         2. The first `g_settings.MAX_PARALLEL_SOLVERS` solver model combinations are poor and
+    #            the solver is unable to find any feasible solution even after executing for hours
+    #       Solution 1: Add a flag to impose hard deadline on execution time, i.e. the execution of a solver is
+    #                   to be stopped if no solution is found by it within the specified hard deadline timelimit
+    # TODO: Problem: See if we can optimise the execution in the below situation:
+    #         1. `g_settings.solver_model_combinations > g_settings.MAX_PARALLEL_SOLVERS`
+    #         2. Some error occur in the execution of a one of
+    #            `g_settings.solver_model_combinations[:g_settings.MAX_PARALLEL_SOLVERS]`
+    #            way before `g_settings.EXECUTION_TIME_LIMIT`
+    time.sleep(g_settings.r_execution_time_limit)
+    at_least_one_solution_found = False
+    while not check_solution_status(tmux_monitor_list):
+        time.sleep(10)  # Give 10 more seconds to the running solvers
+    at_least_one_solution_found = True
+
+    for i in range(min_combination_parallel_solvers, len(g_settings.solver_model_combinations)):
+        g_logger.debug(run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}"'))
+        tmux_sessions_running = int(
+            run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
+        g_logger.debug(tmux_sessions_running)
+
+        while tmux_sessions_running >= g_settings.r_max_parallel_solvers:
+            g_logger.debug("----------")
+            g_logger.debug(f'{tmux_monitor_list=}')
+            g_logger.debug(f'{len(tmux_finished_list)=}')
+            MonitorAndStopper.mas_time(tmux_monitor_list, tmux_finished_list, g_settings.r_execution_time_limit, True)
+            g_logger.debug(f'{tmux_monitor_list=}')
+            g_logger.debug(f'{len(tmux_finished_list)=}')
+
+        exec_info = g_settings.start_solver(i)
+        tmux_monitor_list.append(exec_info)
+        g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
+        time.sleep(0.2)
+
+    run_command_get_output(f"cp -r /tmp/at*nl /tmp/at*octsol /tmp/baron_tmp* '{g_settings.OUTPUT_DIR_LEVEL_1_DATA}'")
+
+    # TODO: Get the best result and its solution file
+    best_result_till_now, best_result_exec_info = float('inf'), None
+
+    for exec_info in tmux_finished_list:
+        status, curr_res = g_settings.solvers[exec_info.solver_name].extract_best_solution(exec_info)
+        g_logger.debug(f'solver={exec_info.solver_name}, model={exec_info.short_uniq_model_name}, {status=}')
+        if not status or curr_res > best_result_till_now:
+            continue
+        g_logger.debug(f'Update best result seen till now: {curr_res} <= {best_result_till_now=}')
+        best_result_till_now = curr_res
+        best_result_exec_info = exec_info
     pass
 
 
