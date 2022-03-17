@@ -217,6 +217,7 @@ class NetworkExecutionInformation:
         self.tmux_bash_pid: Union[str, None] = None  # This has to be set manually
         self.idx: int = idx
         self.solver_name, self.model_name = aes.solver_model_combinations[idx]
+        self.solver_info: SolverInformation = aes.solvers[self.solver_name]
 
         # REFER: https://stackoverflow.com/a/66771847
         self.short_uniq_model_name: str = self.model_name[:self.model_name.find('_')]
