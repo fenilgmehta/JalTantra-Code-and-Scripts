@@ -6,6 +6,7 @@
 # ls m4* | sort -V | xargs -I{} -n 1 ../../output_table_extractor_octeract.sh {}
 
 echo -e "Processing file = '$1'"
+
 cat "$1" | cut -c50- | awk -F'  +' '
 BEGIN {f=0; rows=0}
 /(mpiexec|The best solution|^[ \t]*$|^[^ ])/ {if(f==2) f+=1;}

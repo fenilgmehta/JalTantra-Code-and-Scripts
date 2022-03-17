@@ -34,6 +34,8 @@ END {
 }
 ')
 
+# Perform compression of output values
+# The first and last values are always printed, and the results between them are compressed
 echo "${OUTPUT_AWK}" | python -c "
 import sys
 from math import ceil
