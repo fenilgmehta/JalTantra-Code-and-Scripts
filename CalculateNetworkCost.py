@@ -243,7 +243,7 @@ class NetworkExecutionInformation:
         self.uniq_std_out_err_file_path: str = f'{self.uniq_exec_output_dir.resolve()}/std_out_err.txt'
 
     def __str__(self):
-        return f'[pid={self.tmux_bash_pid}, idx={self.idx}, solver={self.solver_name}, ' \
+        return f'NetworkExecutionInformation[pid={self.tmux_bash_pid}, idx={self.idx}, solver={self.solver_name}, ' \
                f'model={self.short_uniq_model_name}]'
 
 
