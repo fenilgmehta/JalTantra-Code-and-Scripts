@@ -277,7 +277,6 @@ class SolverInformation:
         Returns:
              A boolean value telling whether the solver found any feasible solution or not
         """
-        # REFER: https://stackoverflow.com/questions/42499656/pass-all-arguments-of-a-function-to-another-function
         global g_logger
         if self.fn_check_solution_found is None:
             g_logger.error(f"`self.fn_check_solution_found` is `None` for self.engine_path='{self.engine_path}'")
