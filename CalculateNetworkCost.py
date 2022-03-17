@@ -345,7 +345,8 @@ class AutoExecutorSettings:
                                f'threads={self.CPU_CORES_PER_SOLVER} barstats keepsol lsolmsg '
                                f'outlev=1 prfreq=100 prtime=2 problem";',
                 process_name_to_stop_using_ctrl_c='baron',  # For 1 core and multi core, same process is to be stopped
-                fn_check_solution_found=None
+                fn_check_solution_found=SolverOutputAnalyzer.baron_check_solution_found,
+                fn_extract_best_solution=SolverOutputAnalyzer.baron_extract_best_solution
             ),
             'octeract': SolverInformation(
                 engine_path='./octeract-engine-4.0.0/bin/octeract-engine',
@@ -353,7 +354,8 @@ class AutoExecutorSettings:
                 # For 1 core, process with name 'octeract-engine' is the be stopped using Control+C
                 # For multi core, process with name 'mpirun' is the be stopped using Control+C
                 process_name_to_stop_using_ctrl_c='mpirun' if self.CPU_CORES_PER_SOLVER > 1 else 'octeract-engine',
-                fn_check_solution_found=None
+                fn_check_solution_found=SolverOutputAnalyzer.octeract_check_solution_found,
+                fn_extract_best_solution=SolverOutputAnalyzer.octeract_extract_best_solution
             )
         }
 
