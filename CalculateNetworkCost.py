@@ -20,6 +20,7 @@ g_logger = logging.getLogger('CNC')
 #      • The prefix 'fn_' denotes that the variable stores a function.
 #      • The prefix 'mas_' denotes that the function will do Monitoring and Stopping of running
 #        solver instances depending on the conditions/parameters mentioned after this prefix.
+#      • The prefix 'r_' denotes that the variable is for some system resource (CPU, RAM, time, ...)
 #   2. 'pid_' and '.txt' are the prefix and suffix respectively
 #      for text file having PID of the bash running inside tmux.
 #   3. 'std_out_err_' and '.txt' are the prefix and suffix respectively for the text file
@@ -315,13 +316,13 @@ class AutoExecutorSettings:
     TMUX_UNIQUE_PREFIX = f'AR_NC_{os.getpid()}_'  # AR = Auto Run, NC = Network Cost
 
     def __init__(self):
-        self.CPU_CORES_PER_SOLVER = 1
+        self.r_cpu_cores_per_solver = 1
         # 48 core server is being used
-        self.MAX_PARALLEL_SOLVERS = 44
+        self.r_max_parallel_solvers = 44
         # Time is in seconds, set this to any value <= 0 to ignore this parameter
-        self.EXECUTION_TIME_LIMIT = (0 * 60 * 60) + (5 * 60) + 0
-        self.MIN_FREE_RAM = 2  # GiB
-        self.MIN_FREE_SWAP = 8  # GiB, usefulness of this variable depends on the swappiness of the system
+        self.r_execution_time_limit = (0 * 60 * 60) + (5 * 60) + 0
+        self.r_min_free_ram = 2  # GiB
+        self.r_min_free_swap = 8  # GiB, usefulness of this variable depends on the swappiness of the system
 
         self.models_dir = "./Files/Models"  # m1, m3 => q   ,   m2, m4 => q1, q2
         self.solvers: Dict[str, SolverInformation] = {}
@@ -341,8 +342,8 @@ class AutoExecutorSettings:
         self.solvers = {
             'baron': SolverInformation(
                 engine_path='./ampl.linux-intel64/baron',
-                engine_options=f'option baron_options "maxtime={self.EXECUTION_TIME_LIMIT - 10} '
-                               f'threads={self.CPU_CORES_PER_SOLVER} barstats keepsol lsolmsg '
+                engine_options=f'option baron_options "maxtime={self.r_execution_time_limit - 10} '
+                               f'threads={self.r_cpu_cores_per_solver} barstats keepsol lsolmsg '
                                f'outlev=1 prfreq=100 prtime=2 problem";',
                 process_name_to_stop_using_ctrl_c='baron',  # For 1 core and multi core, same process is to be stopped
                 fn_check_solution_found=SolverOutputAnalyzer.baron_check_solution_found,
@@ -350,10 +351,10 @@ class AutoExecutorSettings:
             ),
             'octeract': SolverInformation(
                 engine_path='./octeract-engine-4.0.0/bin/octeract-engine',
-                engine_options=f'options octeract_options "num_cores={self.CPU_CORES_PER_SOLVER}";',
+                engine_options=f'options octeract_options "num_cores={self.r_cpu_cores_per_solver}";',
                 # For 1 core, process with name 'octeract-engine' is the be stopped using Control+C
                 # For multi core, process with name 'mpirun' is the be stopped using Control+C
-                process_name_to_stop_using_ctrl_c='mpirun' if self.CPU_CORES_PER_SOLVER > 1 else 'octeract-engine',
+                process_name_to_stop_using_ctrl_c='mpirun' if self.r_cpu_cores_per_solver > 1 else 'octeract-engine',
                 fn_check_solution_found=SolverOutputAnalyzer.octeract_check_solution_found,
                 fn_extract_best_solution=SolverOutputAnalyzer.octeract_extract_best_solution
             )
@@ -366,11 +367,11 @@ class AutoExecutorSettings:
         hours = 0 if hours is None else hours
         minutes = 0 if minutes is None else minutes
         seconds = 0 if seconds is None else seconds
-        self.EXECUTION_TIME_LIMIT = (hours * 60 * 60) + (minutes * 60) + seconds
+        self.r_execution_time_limit = (hours * 60 * 60) + (minutes * 60) + seconds
         self.__update_solver_dict()
 
     def set_cpu_cores_per_solver(self, n: int) -> None:
-        self.CPU_CORES_PER_SOLVER = n
+        self.r_cpu_cores_per_solver = n
         self.__update_solver_dict()
 
     def set_data_file_path(self, data_file_path: str) -> None:
@@ -512,9 +513,9 @@ def update_settings(args: argparse.Namespace):
     g_logger.debug(f"Input file md5 = '{g_settings.data_file_md5_hash}'")
 
     g_settings.set_execution_time_limit(seconds=args.time)
-    g_logger.debug(f'Solver Execution Timelimit = {g_settings.EXECUTION_TIME_LIMIT // 60 // 60:02}:'
-                   f'{(g_settings.EXECUTION_TIME_LIMIT // 60) % 60:02}:'
-                   f'{g_settings.EXECUTION_TIME_LIMIT % 60:02}')
+    g_logger.debug(f'Solver Execution Time Limit = {g_settings.r_execution_time_limit // 60 // 60:02}:'
+                   f'{(g_settings.r_execution_time_limit // 60) % 60:02}:'
+                   f'{g_settings.r_execution_time_limit % 60:02}')
 
     for solver_model_numbers_list in args.solver_models:
         for solver_model_numbers in solver_model_numbers_list:
@@ -527,16 +528,16 @@ def update_settings(args: argparse.Namespace):
     g_logger.debug(f'Solver Model Combinations = {g_settings.solver_model_combinations}')
 
     g_settings.set_cpu_cores_per_solver(args.threads_per_solver_instance)
-    g_logger.debug(f'CPU_CORES_PER_SOLVER = {g_settings.CPU_CORES_PER_SOLVER}')
+    g_logger.debug(f'r_cpu_cores_per_solver = {g_settings.r_cpu_cores_per_solver}')
 
     if args.jobs == 0:
-        g_settings.MAX_PARALLEL_SOLVERS = len(g_settings.solver_model_combinations)
+        g_settings.r_max_parallel_solvers = len(g_settings.solver_model_combinations)
     elif args.jobs == -1:
-        g_settings.MAX_PARALLEL_SOLVERS = run_command_get_output('nproc')
+        g_settings.r_max_parallel_solvers = run_command_get_output('nproc')
     else:
-        g_settings.MAX_PARALLEL_SOLVERS = args.jobs
-    g_logger.debug(f'MAX_PARALLEL_SOLVERS = {g_settings.MAX_PARALLEL_SOLVERS}')
-    if g_settings.MAX_PARALLEL_SOLVERS < len(g_settings.solver_model_combinations):
+        g_settings.r_max_parallel_solvers = args.jobs
+    g_logger.debug(f'r_max_parallel_solvers = {g_settings.r_max_parallel_solvers}')
+    if g_settings.r_max_parallel_solvers < len(g_settings.solver_model_combinations):
         # TODO: Add more clear warning message explaining the technique used to get the results
         #       Result = Return the best result found in `EXECUTION_TIME_LIMIT` time among all solver model combinations.
         #                If no result is found, then wait until the first result is found and then return it.
