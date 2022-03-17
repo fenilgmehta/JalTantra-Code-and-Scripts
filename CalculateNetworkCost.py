@@ -248,7 +248,7 @@ class NetworkExecutionInformation:
 
 class SolverInformation:
     def __init__(self, engine_path: str, engine_options: str, process_name_to_stop_using_ctrl_c: str,
-                 fn_check_solution_found):
+                 fn_check_solution_found, fn_extract_best_solution):
         """
         Args:
             engine_path: Path to the solver that will be used by AMPL
@@ -263,6 +263,7 @@ class SolverInformation:
         self.engine_options = engine_options
         self.process_name_to_stop_using_ctrl_c = process_name_to_stop_using_ctrl_c
         self.fn_check_solution_found = fn_check_solution_found
+        self.fn_extract_best_solution = fn_extract_best_solution
 
     def check_solution_found(self, exec_info: NetworkExecutionInformation) -> bool:
         """
@@ -281,6 +282,25 @@ class SolverInformation:
             g_logger.error(f"`self.fn_check_solution_found` is `None` for self.engine_path='{self.engine_path}'")
             return True
         return self.fn_check_solution_found(exec_info)
+
+    def extract_best_solution(self, exec_info: NetworkExecutionInformation) -> Tuple[bool, float]:
+        """
+        Parses the output (stdout and stderr) of the solver and tells us
+        whether the solver has found any feasible solution or not, and if
+        it has, then return its value as well.
+
+        Args:
+            exec_info: NetworkExecutionInformation object having all information regarding the execution of the solver
+
+        Returns:
+             A boolean value telling whether the solver found any feasible solution or not
+             A float value which is the optimal solution found till that moment
+        """
+        global g_logger
+        if self.fn_extract_best_solution is None:
+            g_logger.error(f"`self.fn_check_solution_found` is `None` for self.engine_path='{self.engine_path}'")
+            return True, 0.0
+        return self.fn_extract_best_solution(exec_info)
 
 
 class AutoExecutorSettings:
