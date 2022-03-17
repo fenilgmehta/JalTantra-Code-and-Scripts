@@ -234,11 +234,12 @@ class NetworkExecutionInformation:
         self.data_file_path: str = aes.data_file_path
         self.engine_path: str = aes.solvers[self.solver_name].engine_path
         self.engine_options: str = aes.solvers[self.solver_name].engine_options
-        self.output_dir: pathlib.Path = pathlib.Path(aes.output_dir) / self.short_uniq_combination
+        self.uniq_exec_output_dir: pathlib.Path = \
+            pathlib.Path(aes.output_dir_level_1_network_specific) / self.short_uniq_combination
 
         self.uniq_tmux_session_name: str = f'{aes.TMUX_UNIQUE_PREFIX}{self.short_uniq_combination}'
         self.uniq_pid_file_path: str = f'/tmp/pid_{self.short_uniq_combination}.txt'
-        self.uniq_output_file_path: str = f'{self.output_dir.resolve()}/std_out_err_{self.short_uniq_combination}.txt'
+        self.uniq_std_out_err_file_path: str = f'{self.uniq_exec_output_dir.resolve()}/std_out_err.txt'
 
     def __str__(self):
         return f'[pid={self.tmux_bash_pid}, idx={self.idx}, solver={self.solver_name}, ' \
@@ -283,6 +284,9 @@ class SolverInformation:
 
 
 class AutoExecutorSettings:
+    # Level 0 is main directory inside which everything will exist
+    OUTPUT_DIR_LEVEL_0 = './NetworkResults/'.rstrip('/')  # Note: Do not put trailing forward slash ('/')
+    OUTPUT_DIR_LEVEL_1_DATA = f'{OUTPUT_DIR_LEVEL_0}/SolutionData'
     # Please ensure that proper escaping of white spaces and other special characters
     # is done because this will be executed in a fashion similar to `./a.out`
     AMPL_PATH = './ampl.linux-intel64/ampl'
@@ -299,8 +303,6 @@ class AutoExecutorSettings:
         self.MIN_FREE_RAM = 2  # GiB
         self.MIN_FREE_SWAP = 8  # GiB, usefulness of this variable depends on the swappiness of the system
 
-        self.output_dir = './NetworkResults/'.rstrip('/')  # Note: Do not put trailing forward slash ('/')
-        self.output_data_dir = f'{self.output_dir}/SolutionData'
         self.models_dir = "./Files/Models"  # m1, m3 => q   ,   m2, m4 => q1, q2
         self.solvers: Dict[str, SolverInformation] = {}
         self.__update_solver_dict()
@@ -311,6 +313,7 @@ class AutoExecutorSettings:
         # Path to graph/network (i.e. data/testcase file)
         self.data_file_path: str = ''
         self.data_file_md5_hash: str = ''
+        self.output_dir_level_1_network_specific: str = ''
 
     def __update_solver_dict(self):
         # NOTE: Update `AutoExecutorSettings.AVAILABLE_SOLVERS` if keys in below dictionary are updated
@@ -348,6 +351,12 @@ class AutoExecutorSettings:
         self.CPU_CORES_PER_SOLVER = n
         self.__update_solver_dict()
 
+    def set_data_file_path(self, data_file_path: str) -> None:
+        self.data_file_path = data_file_path
+        self.data_file_md5_hash = file_md5(data_file_path)
+        self.output_dir_level_1_network_specific = f'{AutoExecutorSettings.OUTPUT_DIR_LEVEL_0}' \
+                                                   f'/{self.data_file_md5_hash}'
+
     def start_solver(self, idx: int) -> NetworkExecutionInformation:
         """
         Launch the solver using `tmux` and `AMPL` in background (i.e. asynchronously / non-blocking)
@@ -360,14 +369,14 @@ class AutoExecutorSettings:
         """
         info = NetworkExecutionInformation(self, idx)
 
-        info.output_dir.mkdir(exist_ok=True)
-        if not info.output_dir.exists():
-            g_logger.warning(f"Some directory(s) do not exist in the path: '{info.output_dir.resolve()}'")
-            info.output_dir.mkdir(parents=True, exist_ok=True)
+        info.uniq_exec_output_dir.mkdir(exist_ok=True)
+        if not info.uniq_exec_output_dir.exists():
+            g_logger.warning(f"Some directory(s) do not exist in the path: '{info.uniq_exec_output_dir.resolve()}'")
+            info.uniq_exec_output_dir.mkdir(parents=True, exist_ok=True)
 
         # NOTE: The order of > and 2>&1 matters in the below command
         run_command_get_output(rf'''
-            tmux new-session -d -s '{info.uniq_tmux_session_name}' 'echo $$ > '{info.uniq_pid_file_path}' ; {self.AMPL_PATH} > '{info.uniq_output_file_path}' 2>&1 <<EOF
+            tmux new-session -d -s '{info.uniq_tmux_session_name}' 'echo $$ > '{info.uniq_pid_file_path}' ; {self.AMPL_PATH} > '{info.uniq_std_out_err_file_path}' 2>&1 <<EOF
                 reset;
                 model "{info.models_dir}/{info.model_name}";
                 data "{info.data_file_path}";
@@ -476,8 +485,7 @@ def update_settings(args: argparse.Namespace):
     if not os.path.exists(args.path):
         g_logger.error(f"Cannot access '{args.path}': No such file or directory")
         exit(1)
-    g_settings.data_file_path = args.path
-    g_settings.data_file_md5_hash = file_md5(args.path)
+    g_settings.set_data_file_path(args.path)
     g_logger.debug(f"Graph/Network (i.e. Data/Testcase file) = '{g_settings.data_file_path}'")
     g_logger.debug(f"Input file md5 = '{g_settings.data_file_md5_hash}'")
 
