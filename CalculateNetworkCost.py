@@ -179,7 +179,8 @@ class NetworkExecutionInformation:
         #           the following command: `tmux new -s 'SessionName_12345'`
         #        A. There is no defined limit.
         self.short_uniq_data_file_name: str = aes.data_file_md5_hash
-        self.short_uniq_combination: str = f'{self.short_uniq_model_name}_{self.short_uniq_data_file_name}'
+        self.short_uniq_combination: str = f'{self.solver_name}_' \
+                                           f'{self.short_uniq_model_name}_{self.short_uniq_data_file_name}'
         g_logger.debug(self.short_uniq_model_name, self.short_uniq_data_file_name, self.short_uniq_combination)
 
         self.models_dir: str = aes.models_dir
