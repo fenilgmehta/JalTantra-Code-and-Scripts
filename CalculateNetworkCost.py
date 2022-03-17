@@ -161,6 +161,52 @@ def file_md5(file_path) -> str:
 
 # ---
 
+class SolverOutputAnalyzer:
+    # Baron Functions below
+    @staticmethod
+    def baron_extract_output_table(std_out_err_file_path: str) -> str:
+        return run_command_get_output(f"./output_table_extractor_baron.sh '{std_out_err_file_path}'", '')
+
+    @staticmethod
+    def baron_extract_best_solution(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, float]:
+        """The processing done by this function depends on the output format of `extract_solution_baron(...)` method"""
+        global g_logger
+        csv = SolverOutputAnalyzer.baron_extract_output_table(exec_info.uniq_std_out_err_file_path)
+        if csv == '':
+            return False, 0.0
+        lines = csv.split('\n')
+        lines = [line for line in lines if line != ',' and (not line.startswith('Processing file'))]
+        g_logger.debug(f'{lines=}')
+        return len(lines) > 0, lines[-1] if len(lines) > 0 else 0.0
+
+    @staticmethod
+    def baron_check_solution_found(exec_info: 'NetworkExecutionInformation') -> bool:
+        return SolverOutputAnalyzer.baron_extract_best_solution(exec_info)[0]
+
+    # Octeract Functions below
+    @staticmethod
+    def octeract_extract_output_table(std_out_err_file_path: str) -> str:
+        return run_command_get_output(f"./output_table_extractor_octeract.sh '{std_out_err_file_path}'", '')
+
+    @staticmethod
+    def octeract_extract_best_solution(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, float]:
+        """The processing done by this function depends on the output format of `extract_solution_octeract(...)` method"""
+        global g_logger
+        csv = SolverOutputAnalyzer.octeract_extract_output_table(exec_info.uniq_std_out_err_file_path)
+        if csv == '':
+            return False, 0.0
+        lines = csv.split('\n')
+        lines = [line for line in lines if line != ',' and (not line.startswith('Processing file'))]
+        g_logger.debug(f'{lines=}')
+        return len(lines) > 0, lines[-1] if len(lines) > 0 else 0.0
+
+    @staticmethod
+    def octeract_check_solution_found(exec_info: 'NetworkExecutionInformation') -> bool:
+        return SolverOutputAnalyzer.octeract_extract_best_solution(exec_info)[0]
+
+
+# ---
+
 class NetworkExecutionInformation:
     def __init__(self, aes: 'AutoExecutorSettings', idx: int):
         """
