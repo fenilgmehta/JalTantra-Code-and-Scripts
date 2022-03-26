@@ -221,14 +221,19 @@ class SolverOutputAnalyzer:
 
         status = len(lines) > 0
         best_solution = 0.0
+        g_logger.info(f'Instance={exec_info.__str__()}')
         if len(lines) > 0:
             last_line_splitted = lines[-1].split(',')
             if len(last_line_splitted) > 2:
-                g_logger.warning(f"Probably an infeasible solution found by Octeract: '{lines[-1]}'")
-                g_logger.info(f'Instance={exec_info.__str__()}')
-                status = False
+                if last_line_splitted[-1] == '(I)':
+                    g_logger.warning(f"Infeasible solution found by Octeract: '{lines[-1]}'")
+                    status = False
+                else:
+                    g_logger.warning(f"FIXME: Unhandled unknown case, probably an infeasible "
+                                     f"solution found by Octeract: '{lines[-1]}'")
             else:
                 best_solution = float(last_line_splitted[1])
+        g_logger.debug((status, best_solution))
         return status, best_solution
 
     @staticmethod
