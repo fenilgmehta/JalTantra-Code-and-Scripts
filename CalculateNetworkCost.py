@@ -753,7 +753,21 @@ def parser_check_jobs_int_range(c: str) -> int:
     return val
 
 
+def check_requirements():
+    status, res = run_command('which tmux')
+    if status == False:
+        print('`tmux` not installed')
+        exit(1)
+    status, res = run_command('which bash')
+    if status == False:
+        print('`bash` not installed')
+        exit(1)
+    pass
+
+
 if __name__ == '__main__':
+    check_requirements()
+
     # Create the parser
     # REFER: https://realpython.com/command-line-interfaces-python-argparse/
     # REFER: https://stackoverflow.com/questions/19124304/what-does-metavar-and-action-mean-in-argparse-in-python
