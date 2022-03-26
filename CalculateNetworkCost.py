@@ -265,7 +265,9 @@ class NetworkExecutionInformation:
         self.short_uniq_data_file_name: str = aes.data_file_md5_hash
         self.short_uniq_combination: str = f'{self.solver_name}_' \
                                            f'{self.short_uniq_model_name}_{self.short_uniq_data_file_name}'
-        g_logger.debug(self.short_uniq_model_name, self.short_uniq_data_file_name, self.short_uniq_combination)
+        g_logger.debug((type(self.short_uniq_model_name), type(self.short_uniq_data_file_name),
+                        type(self.short_uniq_combination)))
+        g_logger.debug((self.short_uniq_model_name, self.short_uniq_data_file_name, self.short_uniq_combination))
 
         self.models_dir: str = aes.models_dir
         self.data_file_path: str = aes.data_file_path
@@ -604,7 +606,7 @@ def main():
     at_least_one_solution_found = True
 
     for i in range(min_combination_parallel_solvers, len(g_settings.solver_model_combinations)):
-        g_logger.debug(run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}"'))
+        g_logger.debug(run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}"', debug_print=True))
         tmux_sessions_running = int(run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
         g_logger.debug(tmux_sessions_running)
 
@@ -632,7 +634,8 @@ def main():
 
     run_command_get_output(f"cp -r /tmp/at*nl /tmp/at*octsol /tmp/baron_tmp* '{g_settings.OUTPUT_DIR_LEVEL_1_DATA}'")
 
-    # TODO: Get the best result and its solution file
+    g_logger.debug(f'{len(tmux_monitor_list)=}')
+    g_logger.debug(f'{len(tmux_finished_list)=}')
     status, best_cost, best_cost_instance_exec_info = extract_best_solution(tmux_finished_list)
     if not status:
         g_logger.error('NO feasible solution found')
