@@ -421,7 +421,7 @@ class NetworkExecutionInformation:
 
 class SolverInformation:
     def __init__(self, engine_path: str, engine_options: str, process_name_to_stop_using_ctrl_c: str,
-                 fn_check_solution_found, fn_extract_best_solution):
+                 fn_check_solution_found, fn_extract_best_solution, fn_check_errors, fn_extract_solution_vector):
         """
         Args:
             engine_path: Path to the solver that will be used by AMPL
@@ -437,6 +437,8 @@ class SolverInformation:
         self.process_name_to_stop_using_ctrl_c = process_name_to_stop_using_ctrl_c
         self.fn_check_solution_found = fn_check_solution_found
         self.fn_extract_best_solution = fn_extract_best_solution
+        self.fn_check_errors = fn_check_errors
+        self.fn_extract_solution_vector = fn_extract_solution_vector
 
     def check_solution_found(self, exec_info: NetworkExecutionInformation) -> bool:
         """
@@ -473,6 +475,20 @@ class SolverInformation:
             g_logger.error(f"`self.fn_check_solution_found` is `None` for self.engine_path='{self.engine_path}'")
             return True, 0.0
         return self.fn_extract_best_solution(exec_info)
+
+    def check_errors(self, exec_info: NetworkExecutionInformation) -> Tuple[bool, str]:
+        global g_logger
+        if self.fn_check_errors is None:
+            g_logger.error(f"`self.fn_check_errors` is `None` for self.engine_path='{self.engine_path}'")
+            return False, '?'
+        return self.fn_check_errors(exec_info)
+
+    def extract_solution_vector(self, exec_info: NetworkExecutionInformation) -> Tuple[bool, str, float, str]:
+        global g_logger
+        if self.fn_extract_solution_vector is None:
+            g_logger.error(f"`self.fn_extract_solution_vector` is `None` for self.engine_path='{self.engine_path}'")
+            return False, '?', float('nan'), '?'
+        return self.fn_extract_solution_vector(exec_info)
 
 
 class AutoExecutorSettings:
@@ -520,7 +536,9 @@ class AutoExecutorSettings:
                                f'outlev=1 prfreq=100 prtime=2 problem";',
                 process_name_to_stop_using_ctrl_c='baron',  # For 1 core and multi core, same process is to be stopped
                 fn_check_solution_found=SolverOutputAnalyzer.baron_check_solution_found,
-                fn_extract_best_solution=SolverOutputAnalyzer.baron_extract_best_solution
+                fn_extract_best_solution=SolverOutputAnalyzer.baron_extract_best_solution,
+                fn_check_errors=SolverOutputAnalyzer.baron_check_errors,
+                fn_extract_solution_vector=SolverOutputAnalyzer.baron_extract_solution_vector
             ),
             'octeract': SolverInformation(
                 engine_path='./octeract-engine-4.0.0/bin/octeract-engine',
@@ -529,7 +547,9 @@ class AutoExecutorSettings:
                 # For multi core, process with name 'mpirun' is the be stopped using Control+C
                 process_name_to_stop_using_ctrl_c='mpirun' if self.r_cpu_cores_per_solver > 1 else 'octeract-engine',
                 fn_check_solution_found=SolverOutputAnalyzer.octeract_check_solution_found,
-                fn_extract_best_solution=SolverOutputAnalyzer.octeract_extract_best_solution
+                fn_extract_best_solution=SolverOutputAnalyzer.octeract_extract_best_solution,
+                fn_check_errors=SolverOutputAnalyzer.octeract_check_errors,
+                fn_extract_solution_vector=SolverOutputAnalyzer.octeract_extract_solution_vector
             )
         }
 
