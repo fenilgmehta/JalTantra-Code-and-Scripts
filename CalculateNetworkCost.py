@@ -340,6 +340,7 @@ class AutoExecutorSettings:
     TMUX_UNIQUE_PREFIX = f'AR_NC_{os.getpid()}_'  # AR = Auto Run, NC = Network Cost
 
     def __init__(self):
+        self.debug = False
         self.r_cpu_cores_per_solver = 1
         # 48 core server is being used
         self.r_max_parallel_solvers = 44
@@ -642,6 +643,8 @@ def main():
 
 def update_settings(args: argparse.Namespace):
     global g_logger, g_settings
+
+    g_settings.debug = args.debug
 
     # noinspection PyArgumentList
     logging.basicConfig(
