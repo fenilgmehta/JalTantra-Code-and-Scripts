@@ -799,8 +799,8 @@ def main():
         g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
         time.sleep(0.2)
 
-    while int(run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l')) \
-            >= g_settings.r_max_parallel_solvers:
+    # NOTE: The below loop is required to move finished tmux session from monitor list to finished list
+    while len(tmux_monitor_list):
         g_logger.debug("----------")
         g_logger.debug(f'{tmux_monitor_list=}')
         g_logger.debug(f'{len(tmux_finished_list)=}')
