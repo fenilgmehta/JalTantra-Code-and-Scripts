@@ -594,6 +594,15 @@ def main():
         g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
         time.sleep(0.2)
 
+    while int(run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l')) \
+            >= g_settings.r_max_parallel_solvers:
+        g_logger.debug("----------")
+        g_logger.debug(f'{tmux_monitor_list=}')
+        g_logger.debug(f'{len(tmux_finished_list)=}')
+        MonitorAndStopper.mas_time(tmux_monitor_list, tmux_finished_list, g_settings.r_execution_time_limit, True)
+        g_logger.debug(f'{tmux_monitor_list=}')
+        g_logger.debug(f'{len(tmux_finished_list)=}')
+
     run_command_get_output(f"cp -r /tmp/at*nl /tmp/at*octsol /tmp/baron_tmp* '{g_settings.OUTPUT_DIR_LEVEL_1_DATA}'")
 
     # TODO: Get the best result and its solution file
