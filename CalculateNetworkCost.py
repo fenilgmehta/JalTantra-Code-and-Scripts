@@ -738,9 +738,31 @@ def main():
 
     for i in range(min_combination_parallel_solvers):
         exec_info = g_settings.start_solver(i)
+        g_logger.debug(str(exec_info))
+        g_logger.debug(f'{exec_info.tmux_bash_pid=}')
+        if exec_info.tmux_bash_pid == '0':
+            g_logger.error('FIXME: exec_info.tmux_bash_pid is 0')
+            continue
         tmux_monitor_list.append(exec_info)
         g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
         time.sleep(0.2)
+        g_logger.debug(len(tmux_monitor_list))
+
+    tmux_monitor_list_idx_to_remove = list()
+    for idx, exec_info in enumerate(tmux_monitor_list):
+        if get_process_running_status(exec_info.tmux_bash_pid):
+            continue
+        g_logger.warning(f'tmux session stopped "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
+        g_logger.error(g_settings.solvers[exec_info.solver_name].check_errors(exec_info))
+        tmux_monitor_list_idx_to_remove.append(idx)
+    for idx in reversed(tmux_monitor_list_idx_to_remove):
+        tmux_finished_list.insert(0, tmux_monitor_list.pop(idx))
+    del tmux_monitor_list_idx_to_remove
+
+    g_logger.debug(list(map(str, tmux_monitor_list)))
+    if len(tmux_monitor_list) == 0:
+        g_logger.warning('Failed to start all solver model sessions')
+        exit(3)
 
     # TODO: Problem: Handle case of deadlock like situation
     #         1. `g_settings.solver_model_combinations > g_settings.MAX_PARALLEL_SOLVERS`
