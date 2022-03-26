@@ -423,20 +423,28 @@ class AutoExecutorSettings:
             g_logger.warning(f"Some directory(s) do not exist in the path: '{info.uniq_exec_output_dir.resolve()}'")
             info.uniq_exec_output_dir.mkdir(parents=True, exist_ok=True)
 
+        # REFER: https://stackoverflow.com/questions/2500436/how-does-cat-eof-work-in-bash
+        #        📝 'EOF' should be the only word on the line without any space before and after it.
+        # NOTE: The statement `echo > /dev/null` is required to make the below command work. Without
+        #       it, AMPL is not started. Probably, it has something to do with the `EOF` thing.
         # NOTE: The order of > and 2>&1 matters in the below command
         run_command_get_output(rf'''
-            tmux new-session -d -s '{info.uniq_tmux_session_name}' 'echo $$ > '{info.uniq_pid_file_path}' ; {self.AMPL_PATH} > '{info.uniq_std_out_err_file_path}' 2>&1 <<EOF
-                reset;
-                model "{info.models_dir}/{info.model_name}";
-                data "{info.data_file_path}";
-                option solver "{info.engine_path}";
-                {info.engine_options};
-                solve;
-                display _total_solve_time;
-                display l;
-                display {"q1,q2" if (info.short_uniq_model_name in ("m2", "m4")) else "q"};
-            EOF'
-        ''')
+            tmux new-session -d -s '{info.uniq_tmux_session_name}' '
+echo $$ > "{info.uniq_pid_file_path}"
+{self.AMPL_PATH} > "{info.uniq_std_out_err_file_path}" 2>&1 <<EOF
+    reset;
+    model "{info.models_dir}/{info.model_name}";
+    data "{info.data_file_path}";
+    option solver "{info.engine_path}";
+    {info.engine_options};
+    solve;
+    display _total_solve_time;
+    display l;
+    display {"q1,q2" if (info.short_uniq_model_name in ("m2", "m4")) else "q"};
+EOF
+echo > /dev/null
+'
+        ''', debug_print=self.debug)
 
         info.tmux_bash_pid = run_command_get_output(f'cat "/tmp/pid_{info.short_uniq_combination}.txt"')
         return info
