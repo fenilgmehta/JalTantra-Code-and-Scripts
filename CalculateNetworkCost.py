@@ -7,7 +7,7 @@ import pathlib
 import subprocess
 import sys
 import time
-from typing import List, Tuple, Union, Dict
+from typing import List, Tuple, Union, Dict, Optional
 
 from rich.logging import RichHandler as rich_RichHandler
 
@@ -514,6 +514,29 @@ def check_solution_status(tmux_monitor_list: List[NetworkExecutionInformation]) 
         if g_settings.solvers[info.solver_name].check_solution_found(info):
             return True
     return False
+
+
+def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) -> \
+        Tuple[bool, float, Optional[NetworkExecutionInformation]]:
+    """
+    Args:
+        tmux_monitor_list: List of `NetworkExecutionInformation` which have finished their execution
+
+    Returns:
+        status, best solution, context of solver and model which found the best solution
+    """
+    global g_settings
+    best_result_till_now, best_result_exec_info = float('inf'), None
+    for exec_info in tmux_monitor_list:
+        status, curr_res = g_settings.solvers[exec_info.solver_name].extract_best_solution(exec_info)
+        g_logger.debug(f'solver={exec_info.solver_name}, model={exec_info.short_uniq_model_name}, {status=}')
+        # `if` solution not found by this solver instance `or` a better solution is already known, then `continue`
+        if not status or curr_res > best_result_till_now:
+            continue
+        g_logger.debug(f'Update best result seen till now: {curr_res} <= {best_result_till_now=}')
+        best_result_till_now = curr_res
+        best_result_exec_info = exec_info
+    return best_result_exec_info is not None, best_result_till_now, best_result_exec_info
 
 
 def main():
