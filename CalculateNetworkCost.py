@@ -178,7 +178,16 @@ class SolverOutputAnalyzer:
         lines = csv.split('\n')
         lines = [line for line in lines if line != ',' and (not line.startswith('Processing file'))]
         g_logger.debug(f'{lines=}')
-        return len(lines) > 0, lines[-1] if len(lines) > 0 else 0.0
+
+        status = len(lines) > 0
+        best_solution = 0.0
+        if len(lines) > 0:
+            best_solution = float(lines[-1].split(',')[1])
+        if best_solution > 1e40:
+            g_logger.warning(f"Probably an infeasible solution found by Baron: '{lines[-1]}'")
+            g_logger.info(f'Instance={exec_info.__str__()}')
+            status = False
+        return status, best_solution
 
     @staticmethod
     def baron_check_solution_found(exec_info: 'NetworkExecutionInformation') -> bool:
@@ -199,7 +208,18 @@ class SolverOutputAnalyzer:
         lines = csv.split('\n')
         lines = [line for line in lines if line != ',' and (not line.startswith('Processing file'))]
         g_logger.debug(f'{lines=}')
-        return len(lines) > 0, lines[-1] if len(lines) > 0 else 0.0
+
+        status = len(lines) > 0
+        best_solution = 0.0
+        if len(lines) > 0:
+            last_line_splitted = lines[-1].split(',')
+            if len(last_line_splitted) > 2:
+                g_logger.warning(f"Probably an infeasible solution found by Octeract: '{lines[-1]}'")
+                g_logger.info(f'Instance={exec_info.__str__()}')
+                status = False
+            else:
+                best_solution = float(last_line_splitted[1])
+        return status, best_solution
 
     @staticmethod
     def octeract_check_solution_found(exec_info: 'NetworkExecutionInformation') -> bool:
