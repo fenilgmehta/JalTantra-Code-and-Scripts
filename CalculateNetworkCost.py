@@ -203,6 +203,19 @@ class SolverOutputAnalyzer:
     def baron_check_solution_found(exec_info: 'NetworkExecutionInformation') -> bool:
         return SolverOutputAnalyzer.baron_extract_best_solution(exec_info)[0]
 
+    @staticmethod
+    def baron_check_errors(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
+        global g_logger
+        file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
+        try:
+            err_idx = file_txt.index('Sorry, a demo license is limited to 10 variables')
+            err_msg = file_txt[err_idx:file_txt.index('exit value 1', err_idx)].replace('\n', ' ').strip()
+            g_logger.debug(err_msg)
+            return True, err_msg
+        except ValueError:
+            pass  # substring is not found
+        return False, 'No Errors'
+
     # Octeract Functions below
     @staticmethod
     def octeract_extract_output_table(std_out_err_file_path: str) -> str:
@@ -239,6 +252,63 @@ class SolverOutputAnalyzer:
     @staticmethod
     def octeract_check_solution_found(exec_info: 'NetworkExecutionInformation') -> bool:
         return SolverOutputAnalyzer.octeract_extract_best_solution(exec_info)[0]
+
+    @staticmethod
+    def octeract_check_errors(std_out_err_file_path: str) -> Tuple[bool, str]:
+        global g_logger
+        file_txt = open(std_out_err_file_path, 'r').read()
+        if 'Iteration            GAP               LLB          BUB            Pool       Time       Mem' in file_txt:
+            return False, 'Probably No Errors'
+
+        err_idx = None
+        try:
+            err_idx = file_txt.index('Request_Error')
+            err_msg = file_txt[err_idx:file_txt.index('exit value 1', err_idx)].replace('\n', ' ').strip()
+            g_logger.debug(err_msg)
+            return True, err_msg
+        except ValueError:
+            if err_idx is not None:
+                g_logger.debug(file_txt[err_idx:])
+                return True, file_txt[err_idx:]
+            pass  # substring is not found
+
+        err_idx = None
+        try:
+            err_idx = file_txt.index('Sorry, a demo license for AMPL is limited to 300 variables')
+            err_msg = file_txt[err_idx:file_txt.index('ampl:', err_idx)].replace('\n', ' ').strip()
+            g_logger.debug(err_msg)
+            return True, err_msg
+        except ValueError:
+            if err_idx is not None:
+                g_logger.debug(file_txt[err_idx:])
+                return True, file_txt[err_idx:]
+            pass  # substring is not found
+
+        err_idx = None
+        try:
+            err_idx = file_txt.index('Error: Failed to establish connection to server.')
+            err_msg = file_txt[err_idx:file_txt.index('ampl:', err_idx)].replace('\n', ' ').strip()
+            g_logger.debug(err_msg)
+            return True, err_msg
+        except ValueError:
+            if err_idx is not None:
+                g_logger.debug(file_txt[err_idx:])
+                return True, file_txt[err_idx:]
+            pass  # substring is not found
+
+        err_idx = None
+        try:
+            err_idx = file_txt.index('Error executing "solve" command:')
+            err_msg = file_txt[err_idx:file_txt.index('<BREAK>', err_idx)].replace('\n', ' ').strip()
+            g_logger.debug(err_msg)
+            return True, err_msg
+        except ValueError:
+            if err_idx is not None:
+                g_logger.debug(file_txt[err_idx:])
+                return True, file_txt[err_idx:]
+            pass  # substring is not found
+
+        return False, 'No Errors'
 
 
 # ---
