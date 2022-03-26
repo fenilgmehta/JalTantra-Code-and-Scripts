@@ -40,6 +40,8 @@ g_logger = logging.getLogger('CNC')
 #   6. There is no limitation on the amount of available RAM (This assumption make the program simpler.
 #      However, in future, it may be removed during deployment to make sure the solvers runs at optimal
 #      speed - accordingly changes need to be done in this program)
+#   7. Satisfy RegEx r'(a-zA-Z0-9_ )+' -> Absolute path of this Python script, and
+#                                         absolute path to graph/network (i.e. data/testcase file)
 
 # ---
 
