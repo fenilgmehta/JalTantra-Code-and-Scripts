@@ -142,6 +142,11 @@ def get_execution_time(pid: Union[int, str]) -> int:
     return int(run_command(f'ps -o etimes= -p "{pid}"', str(10 ** 15))[1])  # 10**15 seconds == ~3.17 crore years
 
 
+def get_process_running_status(pid: Union[int, str]) -> bool:
+    """Returns: Whether the process with PID=pid is running or not"""
+    return run_command(f'ps -p {pid}')[0]
+
+
 def file_md5(file_path) -> str:
     """It is assumed that the file will exist"""
     # REFER: https://stackoverflow.com/questions/16874598/how-do-i-calculate-the-md5-checksum-of-a-file-in-python
