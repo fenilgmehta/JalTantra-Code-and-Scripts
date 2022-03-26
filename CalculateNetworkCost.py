@@ -354,6 +354,7 @@ class AutoExecutorSettings:
         self.data_file_path: str = ''
         self.data_file_md5_hash: str = ''
         self.output_dir_level_1_network_specific: str = ''
+        self.output_network_specific_result: str = ''
 
     def __update_solver_dict(self):
         # NOTE: Update `AutoExecutorSettings.AVAILABLE_SOLVERS` if keys in below dictionary are updated
@@ -398,6 +399,7 @@ class AutoExecutorSettings:
         self.data_file_md5_hash = file_md5(data_file_path)
         self.output_dir_level_1_network_specific = f'{AutoExecutorSettings.OUTPUT_DIR_LEVEL_0}' \
                                                    f'/{self.data_file_md5_hash}'
+        self.output_network_specific_result = self.output_dir_level_1_network_specific + '/0-result.txt'
 
     def start_solver(self, idx: int) -> NetworkExecutionInformation:
         """
@@ -606,16 +608,22 @@ def main():
     run_command_get_output(f"cp -r /tmp/at*nl /tmp/at*octsol /tmp/baron_tmp* '{g_settings.OUTPUT_DIR_LEVEL_1_DATA}'")
 
     # TODO: Get the best result and its solution file
-    best_result_till_now, best_result_exec_info = float('inf'), None
-
-    for exec_info in tmux_finished_list:
-        status, curr_res = g_settings.solvers[exec_info.solver_name].extract_best_solution(exec_info)
-        g_logger.debug(f'solver={exec_info.solver_name}, model={exec_info.short_uniq_model_name}, {status=}')
-        if not status or curr_res > best_result_till_now:
-            continue
-        g_logger.debug(f'Update best result seen till now: {curr_res} <= {best_result_till_now=}')
-        best_result_till_now = curr_res
-        best_result_exec_info = exec_info
+    status, best_cost, best_cost_instance_exec_info = extract_best_solution(tmux_finished_list)
+    if not status:
+        g_logger.error('NO feasible solution found')
+        run_command(f"touch '{g_settings.output_network_specific_result}'")
+    else:
+        g_logger.info(f'{best_cost=}')
+        g_logger.info(f'Instance={best_cost_instance_exec_info.__str__()}')
+        g_logger.info(f'Solver={best_cost_instance_exec_info.solver_name}, '
+                      f'Model={best_cost_instance_exec_info.short_uniq_model_name}')
+        run_command(f"echo '{best_cost}' >> '{g_settings.output_network_specific_result}'")
+        run_command(f"echo '{best_cost_instance_exec_info.solver_name}'"
+                    f" >> '{g_settings.output_network_specific_result}'")
+        run_command(f"echo '{best_cost_instance_exec_info.short_uniq_model_name}'"
+                    f" >> '{g_settings.output_network_specific_result}'")
+        run_command(f"echo '{best_cost_instance_exec_info.uniq_std_out_err_file_path}'"
+                    f" >> '{g_settings.output_network_specific_result}'")
     pass
 
 
