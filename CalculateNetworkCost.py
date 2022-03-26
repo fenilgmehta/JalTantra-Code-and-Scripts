@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import argparse
 import hashlib
+import json
 import logging
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import time
@@ -216,6 +218,44 @@ class SolverOutputAnalyzer:
             pass  # substring is not found
         return False, 'No Errors'
 
+    @staticmethod
+    def baron_extract_solution_file_path(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
+        file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
+        # re.M -> Makes $ match the end of a line (not just the end of the string) and
+        #         makes ^ match the start of any line (not just the start of the string).
+        solution_dir_name = re.search(r'Retaining scratch directory "/tmp/(.+)"\.', file_txt, re.M).group(1)
+        if solution_dir_name == '':
+            return False, 'RegEx search failed'
+        return True, (pathlib.Path(exec_info.aes.OUTPUT_DIR_LEVEL_1_DATA) / solution_dir_name / 'res.lst').resolve()
+
+    @staticmethod
+    def baron_extract_solution_vector(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str, float, str]:
+        ok, file_to_parse = SolverOutputAnalyzer.baron_extract_solution_file_path(exec_info)
+        if not ok:
+            return False, file_to_parse, float('nan'), 'Failed to extract solution file path'
+        file_txt = open(file_to_parse, 'r').read()
+        objective_value = 'NotDefined'
+        try:
+            objective_value = re.search(r'The above solution has an objective value of:(.+)', file_txt).group(1).strip()
+            objective_value = float(objective_value)
+        except Exception as e:
+            g_logger.error(f'Exception e:\n{e}')
+            return False, file_to_parse, float('nan'), f"Objective value (='{objective_value}') RegEx search failed"
+        try:
+            # The lines from '^The best solution found is.+' till the End Of File
+            # idx = file_txt.index('The best solution found is:')
+            idx_start = re.search(r'variable\s*xlo\s*xbest\s*xup', file_txt).end(1)
+            idx_end = re.search(r'The above solution has an objective value of', file_txt).start(1)
+            solution_vector_list = list()
+            for line in file_txt[idx_start:idx_end].strip():
+                vals = line.strip().split()
+                solution_vector_list.append(f'{vals[0]}: {vals[2]}')  # Variable Name, Best Value
+            return True, file_to_parse, objective_value, '\n'.join(solution_vector_list)
+        except ValueError:
+            return False, file_to_parse, objective_value, 'Solution vector RegEx search failed'
+        # noinspection PyUnreachableCode
+        return False, file_to_parse, objective_value, 'FIXME: Unhandled unknown case'
+
     # Octeract Functions below
     @staticmethod
     def octeract_extract_output_table(std_out_err_file_path: str) -> str:
@@ -309,6 +349,30 @@ class SolverOutputAnalyzer:
             pass  # substring is not found
 
         return False, 'No Errors'
+
+    @staticmethod
+    def octeract_extract_solution_file_path(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
+        file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
+        # re.M -> Makes $ match the end of a line (not just the end of the string) and
+        #         makes ^ match the start of any line (not just the start of the string).
+        solution_file_name = re.search(r'Solution file written to: /tmp/(.+)', file_txt).group(1)
+        if solution_file_name == '':
+            g_logger.debug(f"FIXME: log file path='{exec_info.uniq_std_out_err_file_path}', file_txt:\n{file_txt}")
+            return False, 'RegEx search failed'
+        return True, (pathlib.Path(exec_info.aes.OUTPUT_DIR_LEVEL_1_DATA) / solution_file_name).resolve()
+
+    @staticmethod
+    def octeract_extract_solution_vector(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str, float, str]:
+        ok, file_to_parse = SolverOutputAnalyzer.octeract_extract_solution_file_path(exec_info)
+        if not ok:
+            return False, file_to_parse, float('nan'), ''
+        json_data = json.loads(open(file_to_parse, 'r').read())
+        if not json_data['feasible']:
+            return False, file_to_parse, json_data['objective_value'], json_data['statistics']['dgo_exit_status']
+        objective_value: float = json_data['objective_value']
+        solution_vector = '\n'.join(
+            [f'{i}: {j}' for i, j in sorted(json_data['solution_vector'].items(), key=lambda kv: (len(kv[0]), kv[0]))])
+        return True, file_to_parse, objective_value, solution_vector
 
 
 # ---
