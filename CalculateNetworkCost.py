@@ -102,10 +102,10 @@ def run_command_get_output(cmd: str, default_result: str = '0', debug_print: boo
              (dev) ➜  ~ which kill
              kill: shell built-in command
         2. /bin/kill --help
-             (dev) ➜  ~ env which kill      
+             (dev) ➜  ~ env which kill
              /bin/kill
         3. bash -c 'kill --help' (This has been used in this script)
-             (dev) ➜  ~ bash -c 'which kill' 
+             (dev) ➜  ~ bash -c 'which kill'
              /bin/kill
 
     Returns:
@@ -127,13 +127,13 @@ def delete_last_lines(n=1):
 def get_free_ram() -> float:
     """Returns: free RAM in GiB"""
     # REFER: https://stackoverflow.com/questions/34937580/get-available-memory-in-gb-using-single-bash-shell-command/34938001
-    return float(run_command_get_output(r'''awk '/MemFree/ { printf "%.3f \n", $2/1024/1024 }' /proc/meminfo'''))
+    return float(run_command_get_output(r'''awk '/MemFree/ { printf "%.3f\n", $2/1024/1024 }' /proc/meminfo'''))
 
 
 def get_free_swap() -> float:
     """Returns: free Swap in GiB"""
     # REFER: https://stackoverflow.com/questions/34937580/get-available-memory-in-gb-using-single-bash-shell-command/34938001
-    return float(run_command_get_output(r'''awk '/SwapFree/ { printf "%.3f \n", $2/1024/1024 }' /proc/meminfo'''))
+    return float(run_command_get_output(r'''awk '/SwapFree/ { printf "%.3f\n", $2/1024/1024 }' /proc/meminfo'''))
 
 
 def get_execution_time(pid: Union[int, str]) -> int:
