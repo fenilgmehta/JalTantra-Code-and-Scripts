@@ -59,7 +59,7 @@ def run_command(cmd: str, default_result: str = '', debug_print: bool = False) -
     # REFER: Context-Search-fms
     global g_logger, g_BASH_PATH
     if debug_print:
-        g_logger.debug(f'COMMAND: `{cmd}`')
+        g_logger.debug(f'COMMAND:\n`{cmd}`')
     try:
         # NOTE: Not using the below line of code because "sh" shell does not seem to properly parse the command
         #       Example: `kill -s SIGINT 12345`
@@ -73,11 +73,14 @@ def run_command(cmd: str, default_result: str = '', debug_print: bool = False) -
             shell=False
         ).decode().strip()
         if debug_print:
-            g_logger.debug(output)
+            g_logger.debug(f'OUTPUT:\n{output}')
         return True, output
-    except Exception as e:
-        g_logger.warning(f'EXCEPTION OCCURRED (cmd=`{cmd}`), will return '
-                         f'default_result ("{default_result}") as the output')
+    except subprocess.CalledProcessError as e:
+        g_logger.info(f'EXCEPTION OCCURRED (cmd=`{cmd}`), will return '
+                      f'default_result ("{default_result}") as the output')
+        g_logger.info(f'CalledProcessError = {str(e).splitlines()[-1]}')
+        g_logger.info(f'Exit Code = {e.returncode}')
+        g_logger.info(f'Output = {e.output}')
         # g_logger.warning(e)
         # g_logger.warning(traceback.format_exc())
     if debug_print:
