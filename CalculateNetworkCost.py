@@ -56,7 +56,7 @@ def run_command(cmd: str, default_result: str = '', debug_print: bool = False) -
     `stderr` is merged with `stdout`
 
     Returns:
-        Tuple of [status, output]
+        Tuple of [ok, output]
     """
     # REFER: Context-Search-fms
     global g_logger, g_BASH_PATH
@@ -191,15 +191,15 @@ class SolverOutputAnalyzer:
         lines = [line for line in lines if line != ',' and (not line.startswith('Processing file'))]
         g_logger.debug(f'{lines=}')
 
-        status = len(lines) > 0
+        ok = len(lines) > 0
         best_solution = 0.0
         if len(lines) > 0:
             best_solution = float(lines[-1].split(',')[1])
         if best_solution > 1e40:
             g_logger.warning(f"Probably an infeasible solution found by Baron: '{lines[-1]}'")
             g_logger.info(f'Instance={exec_info.__str__()}')
-            status = False
-        return status, best_solution
+            ok = False
+        return ok, best_solution
 
     @staticmethod
     def baron_check_solution_found(exec_info: 'NetworkExecutionInformation') -> bool:
@@ -706,15 +706,15 @@ def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) 
         tmux_monitor_list: List of `NetworkExecutionInformation` which have finished their execution
 
     Returns:
-        status, best solution, context of solver and model which found the best solution
+        ok, best solution, context of solver and model which found the best solution
     """
     global g_settings
     best_result_till_now, best_result_exec_info = float('inf'), None
     for exec_info in tmux_monitor_list:
-        status, curr_res = g_settings.solvers[exec_info.solver_name].extract_best_solution(exec_info)
-        g_logger.debug(f'solver={exec_info.solver_name}, model={exec_info.short_uniq_model_name}, {status=}')
+        ok, curr_res = g_settings.solvers[exec_info.solver_name].extract_best_solution(exec_info)
+        g_logger.debug(f'solver={exec_info.solver_name}, model={exec_info.short_uniq_model_name}, {ok=}')
         # `if` solution not found by this solver instance `or` a better solution is already known, then `continue`
-        if not status or curr_res > best_result_till_now:
+        if not ok or curr_res > best_result_till_now:
             continue
         g_logger.debug(f'Update best result seen till now: {curr_res} <= {best_result_till_now=}')
         best_result_till_now = curr_res
@@ -947,12 +947,12 @@ def parser_check_jobs_int_range(c: str) -> int:
 
 
 def check_requirements():
-    status, res = run_command('which tmux')
-    if status == False:
+    ok, res = run_command('which tmux')
+    if not ok:
         print('`tmux` not installed')
         exit(1)
-    status, res = run_command('which bash')
-    if status == False:
+    ok, res = run_command('which bash')
+    if not ok:
         print('`bash` not installed')
         exit(1)
     pass
