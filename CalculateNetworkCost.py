@@ -656,7 +656,7 @@ def update_settings(args: argparse.Namespace):
 
     if not os.path.exists(args.path):
         g_logger.error(f"Cannot access '{args.path}': No such file or directory")
-        exit(1)
+        exit(2)
     g_settings.set_data_file_path(args.path)
     g_logger.debug(f"Graph/Network (i.e. Data/Testcase file) = '{g_settings.data_file_path}'")
     g_logger.debug(f"Input file md5 = '{g_settings.data_file_md5_hash}'")
