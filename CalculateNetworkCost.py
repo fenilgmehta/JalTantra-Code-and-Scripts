@@ -770,6 +770,7 @@ def main():
         f"ln '{g_settings.data_file_path}' '{(pathlib.Path(g_settings.output_dir_level_1_network_specific) / '0_graph_network_data_testcase.R').resolve()}'"
     )
 
+    tmux_original_list: List[NetworkExecutionInformation] = list()
     tmux_monitor_list: List[NetworkExecutionInformation] = list()
     tmux_finished_list: List[NetworkExecutionInformation] = list()
 
@@ -786,12 +787,13 @@ def main():
         if exec_info.tmux_bash_pid == '0':
             g_logger.error('FIXME: exec_info.tmux_bash_pid is 0')
             continue
+        tmux_original_list.append(exec_info)
         tmux_monitor_list.append(exec_info)
         g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
         time.sleep(0.2)
         g_logger.debug(len(tmux_monitor_list))
 
-    # Error checking
+    # Error checking - Round 1
     tmux_monitor_list_idx_to_remove = list()
     for idx, exec_info in enumerate(tmux_monitor_list):
         if get_process_running_status(exec_info.tmux_bash_pid):
@@ -835,6 +837,13 @@ def main():
     g_logger.debug("Tmux session count = " +
                    run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
 
+    # Error checking - Round 2
+    for exec_info in tmux_original_list:
+        ok, err_msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
+        if not ok:
+            g_logger.warning(str(exec_info))
+            g_logger.error(err_msg)
+
     at_least_one_solution_found = False
     while not check_solution_status(tmux_monitor_list):
         time.sleep(10)  # Give 10 more seconds to the running solvers
@@ -855,6 +864,7 @@ def main():
             g_logger.debug(f'{len(tmux_finished_list)=}')
 
         exec_info = g_settings.start_solver(i)
+        tmux_original_list.append(exec_info)
         tmux_monitor_list.append(exec_info)
         g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
         time.sleep(0.2)
@@ -868,8 +878,8 @@ def main():
         g_logger.debug(f'{tmux_monitor_list=}')
         g_logger.debug(f'{len(tmux_finished_list)=}')
 
-    # Final round of error checking
-    for exec_info in tmux_finished_list:
+    # Error checking - Round 3 (last round)
+    for exec_info in tmux_original_list:
         ok, err_msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
         if not ok:
             g_logger.warning(str(exec_info))
@@ -881,7 +891,7 @@ def main():
 
     g_logger.debug(f'{len(tmux_monitor_list)=}')
     g_logger.debug(f'{len(tmux_finished_list)=}')
-    status, best_cost, best_cost_instance_exec_info = extract_best_solution(tmux_finished_list)
+    status, best_cost, best_cost_instance_exec_info = extract_best_solution(tmux_original_list)
     g_logger.debug((status, best_cost, str(best_cost_instance_exec_info)))
 
     # Do not overwrite the result file of previous execution
