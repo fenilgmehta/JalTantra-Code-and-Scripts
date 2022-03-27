@@ -213,10 +213,20 @@ class SolverOutputAnalyzer:
             err_idx = file_txt.index('Sorry, a demo license is limited to 10 variables')
             err_msg = file_txt[err_idx:file_txt.index('exit value 1', err_idx)].replace('\n', ' ').strip()
             g_logger.debug(err_msg)
-            return True, err_msg
+            return False, err_msg
         except ValueError:
-            pass  # substring is not found
-        return False, 'No Errors'
+            pass  # substring not found
+        try:
+            err_idx = re.search(r'''Can't\s+find\s+file\s+['"]?.+['"]?''', file_txt).start()
+            g_logger.debug(file_txt[err_idx:])
+            return False, file_txt[err_idx:]
+        except AttributeError as e:
+            # re.search returned None
+            g_logger.debug(f'{type(e)}: {e}')
+            g_logger.debug(f'{exec_info.uniq_std_out_err_file_path=}')
+        except Exception as e:
+            g_logger.error(f'FIXME: {type(e)}:\n{e}')
+        return True, 'No Errors'
 
     @staticmethod
     def baron_extract_solution_file_path(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
@@ -302,57 +312,70 @@ class SolverOutputAnalyzer:
         file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
 
         if 'Iteration            GAP               LLB          BUB            Pool       Time       Mem' in file_txt:
-            return False, 'Probably No Errors'
+            return True, 'Probably No Errors'
+
+        try:
+            err_idx = re.search(r'''Can't\s+find\s+file\s+['"]?.+['"]?''', file_txt).start()
+            g_logger.debug(file_txt[err_idx:])
+            return False, file_txt[err_idx:]
+        except IndexError as e:
+            g_logger.error(f'{type(e)}: {e}')
+            g_logger.debug(f'{exec_info.uniq_std_out_err_file_path=}')
+        except AttributeError as e:
+            g_logger.debug(f'{type(e)}: {e}')
+            g_logger.debug(f'{exec_info.uniq_std_out_err_file_path=}')
+        except Exception as e:
+            g_logger.error(f'FIXME: {type(e)}:\n{e}')
 
         err_idx = None
         try:
             err_idx = file_txt.index('Request_Error')
             err_msg = file_txt[err_idx:file_txt.index('exit value 1', err_idx)].replace('\n', ' ').strip()
             g_logger.debug(err_msg)
-            return True, err_msg
+            return False, err_msg
         except ValueError:
             if err_idx is not None:
                 g_logger.debug(file_txt[err_idx:])
-                return True, file_txt[err_idx:]
-            pass  # substring is not found
+                return False, file_txt[err_idx:]
+            pass  # substring not found
 
         err_idx = None
         try:
             err_idx = file_txt.index('Sorry, a demo license for AMPL is limited to 300 variables')
             err_msg = file_txt[err_idx:file_txt.index('ampl:', err_idx)].replace('\n', ' ').strip()
             g_logger.debug(err_msg)
-            return True, err_msg
+            return False, err_msg
         except ValueError:
             if err_idx is not None:
                 g_logger.debug(file_txt[err_idx:])
-                return True, file_txt[err_idx:]
-            pass  # substring is not found
+                return False, file_txt[err_idx:]
+            pass  # substring not found
 
         err_idx = None
         try:
             err_idx = file_txt.index('Error: Failed to establish connection to server.')
             err_msg = file_txt[err_idx:file_txt.index('ampl:', err_idx)].replace('\n', ' ').strip()
             g_logger.debug(err_msg)
-            return True, err_msg
+            return False, err_msg
         except ValueError:
             if err_idx is not None:
                 g_logger.debug(file_txt[err_idx:])
-                return True, file_txt[err_idx:]
-            pass  # substring is not found
+                return False, file_txt[err_idx:]
+            pass  # substring not found
 
         err_idx = None
         try:
             err_idx = file_txt.index('Error executing "solve" command:')
             err_msg = file_txt[err_idx:file_txt.index('<BREAK>', err_idx)].replace('\n', ' ').strip()
             g_logger.debug(err_msg)
-            return True, err_msg
+            return False, err_msg
         except ValueError:
             if err_idx is not None:
                 g_logger.debug(file_txt[err_idx:])
-                return True, file_txt[err_idx:]
-            pass  # substring is not found
+                return False, file_txt[err_idx:]
+            pass  # substring not found
 
-        return False, 'No Errors'
+        return True, 'No Errors'
 
     @staticmethod
     def octeract_extract_solution_file_path(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
@@ -479,10 +502,11 @@ class SolverInformation:
         return self.fn_extract_best_solution(exec_info)
 
     def check_errors(self, exec_info: NetworkExecutionInformation) -> Tuple[bool, str]:
+        """By default, it is assumed that everything is ok (i.e. error free)"""
         global g_logger
         if self.fn_check_errors is None:
             g_logger.error(f"`self.fn_check_errors` is `None` for self.engine_path='{self.engine_path}'")
-            return False, '?'
+            return True, '?'
         return self.fn_check_errors(exec_info)
 
     def extract_solution_vector(self, exec_info: NetworkExecutionInformation) -> Tuple[bool, str, float, str]:
