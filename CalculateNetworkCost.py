@@ -762,6 +762,7 @@ def main():
         g_settings.r_max_parallel_solvers
     )
 
+    # Begin execution of first batch
     for i in range(min_combination_parallel_solvers):
         exec_info = g_settings.start_solver(i)
         g_logger.debug(str(exec_info))
@@ -774,6 +775,7 @@ def main():
         time.sleep(0.2)
         g_logger.debug(len(tmux_monitor_list))
 
+    # Error checking
     tmux_monitor_list_idx_to_remove = list()
     for idx, exec_info in enumerate(tmux_monitor_list):
         if get_process_running_status(exec_info.tmux_bash_pid):
@@ -784,7 +786,6 @@ def main():
     for idx in reversed(tmux_monitor_list_idx_to_remove):
         tmux_finished_list.insert(0, tmux_monitor_list.pop(idx))
     del tmux_monitor_list_idx_to_remove
-
     g_logger.debug(list(map(lambda x: x.__str__(), tmux_monitor_list)))
     if len(tmux_monitor_list) == 0:
         g_logger.warning('Failed to start all solver model sessions')
@@ -807,6 +808,7 @@ def main():
         time.sleep(10)  # Give 10 more seconds to the running solvers
     at_least_one_solution_found = True
 
+    # Begin execution of next batch
     for i in range(min_combination_parallel_solvers, len(g_settings.solver_model_combinations)):
         g_logger.debug(run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}"', debug_print=True))
         tmux_sessions_running = int(run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
