@@ -242,15 +242,20 @@ class SolverOutputAnalyzer:
         try:
             # The lines from '^The best solution found is.+' till the End Of File
             # idx = file_txt.index('The best solution found is:')
-            idx_start = re.search(r'variable\s*xlo\s*xbest\s*xup', file_txt).end(1)
-            idx_end = re.search(r'The above solution has an objective value of', file_txt).start(1)
+            idx_start = re.search(r'variable\s*xlo\s*xbest\s*xup', file_txt).end()
+            idx_end = re.search(r'The above solution has an objective value of', file_txt).start()
             solution_vector_list = list()
-            for line in file_txt[idx_start:idx_end].strip():
+            for line in file_txt[idx_start:idx_end].strip().splitlines(keepends=False):
                 vals = line.strip().split()
                 solution_vector_list.append(f'{vals[0]}: {vals[2]}')  # Variable Name, Best Value
             return True, file_to_parse, objective_value, '\n'.join(solution_vector_list)
-        except ValueError:
+        except AttributeError as e:
+            # re.search returned None
+            g_logger.debug(f'{type(e)}: {e}')
+            g_logger.debug(f'{exec_info.uniq_std_out_err_file_path=}')
             return False, file_to_parse, objective_value, 'Solution vector RegEx search failed'
+        except Exception as e:
+            g_logger.error(f'FIXME: {type(e)}:\n{e}')
         # noinspection PyUnreachableCode
         return False, file_to_parse, objective_value, 'FIXME: Unhandled unknown case'
 
