@@ -887,7 +887,7 @@ def main():
     # Do not overwrite the result file of previous execution
     # Just rename the result file of previous execution
     if os.path.exists(g_settings.output_network_specific_result):
-        path_prefix, path_suffix = os.path.split(g_settings.output_network_specific_result)
+        path_prefix, path_suffix = os.path.splitext(g_settings.output_network_specific_result)
         new_path = None
         for i in range(1, 10000000):
             new_path = f'{path_prefix}_{i:07}{path_suffix}'
