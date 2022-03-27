@@ -221,9 +221,7 @@ class SolverOutputAnalyzer:
     @staticmethod
     def baron_extract_solution_file_path(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
         file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
-        # re.M -> Makes $ match the end of a line (not just the end of the string) and
-        #         makes ^ match the start of any line (not just the start of the string).
-        solution_dir_name = re.search(r'Retaining scratch directory "/tmp/(.+)"\.', file_txt, re.M).group(1)
+        solution_dir_name = re.search(r'Retaining scratch directory "/tmp/(.+)"\.', file_txt).group(1)
         if solution_dir_name == '':
             return False, 'RegEx search failed'
         return True, (pathlib.Path(exec_info.aes.OUTPUT_DIR_LEVEL_1_DATA) / solution_dir_name / 'res.lst').resolve()
@@ -353,8 +351,6 @@ class SolverOutputAnalyzer:
     @staticmethod
     def octeract_extract_solution_file_path(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
         file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
-        # re.M -> Makes $ match the end of a line (not just the end of the string) and
-        #         makes ^ match the start of any line (not just the start of the string).
         solution_file_name = re.search(r'Solution file written to: /tmp/(.+)', file_txt).group(1)
         if solution_file_name == '':
             g_logger.debug(f"FIXME: log file path='{exec_info.uniq_std_out_err_file_path}', file_txt:\n{file_txt}")
