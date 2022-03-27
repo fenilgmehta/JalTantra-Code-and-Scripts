@@ -834,6 +834,13 @@ def main():
         g_logger.debug(f'{tmux_monitor_list=}')
         g_logger.debug(f'{len(tmux_finished_list)=}')
 
+    # Final round of error checking
+    for exec_info in tmux_finished_list:
+        ok, err_msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
+        if not ok:
+            g_logger.warning(str(exec_info))
+            g_logger.error(err_msg)
+
     # NOTE: We will not copy files with glob `/tmp/at*nl` because they
     #       are only used to pass information from AMPL to solver
     run_command_get_output(f"cp -r /tmp/at*octsol /tmp/baron_tmp* '{g_settings.OUTPUT_DIR_LEVEL_1_DATA}'")
