@@ -226,6 +226,8 @@ class SolverOutputAnalyzer:
             g_logger.debug(f'{exec_info.uniq_std_out_err_file_path=}')
         except Exception as e:
             g_logger.error(f'FIXME: {type(e)}:\n{e}')
+        if 'No feasible solution was found' in file_txt:
+            return False, 'No feasible solution was found'
         return True, 'No Errors'
 
     @staticmethod
@@ -248,7 +250,8 @@ class SolverOutputAnalyzer:
             objective_value = float(objective_value)
         except Exception as e:
             g_logger.error(f'Exception e:\n{e}')
-            return False, file_to_parse, float('nan'), f"Objective value (='{objective_value}') RegEx search failed"
+            return False, file_to_parse, float('nan'), f"Objective value (='{objective_value}') RegEx search failed " \
+                                                       f"(Probably: no feasible solution was found)"
         try:
             # The lines from '^The best solution found is.+' till the End Of File
             # idx = file_txt.index('The best solution found is:')
