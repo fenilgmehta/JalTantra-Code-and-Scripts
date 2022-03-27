@@ -765,6 +765,11 @@ def main():
     run_command_get_output(f'mkdir -p "{g_settings.OUTPUT_DIR_LEVEL_1_DATA}"')
     run_command_get_output(f'mkdir -p "{g_settings.output_dir_level_1_network_specific}"')
 
+    # Create hardlink to the file passed using -p/--path parameter
+    run_command(
+        f"ln '{g_settings.data_file_path}' '{(pathlib.Path(g_settings.output_dir_level_1_network_specific) / '0_graph_network_data_testcase.R').resolve()}'"
+    )
+
     tmux_monitor_list: List[NetworkExecutionInformation] = list()
     tmux_finished_list: List[NetworkExecutionInformation] = list()
 
