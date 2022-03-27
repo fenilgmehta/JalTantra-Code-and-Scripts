@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import datetime
 import hashlib
 import json
 import logging
@@ -805,7 +806,23 @@ def main():
     #         2. Some error occur in the execution of a one of
     #            `g_settings.solver_model_combinations[:g_settings.MAX_PARALLEL_SOLVERS]`
     #            way before `g_settings.EXECUTION_TIME_LIMIT`
-    time.sleep(g_settings.r_execution_time_limit)
+    execution_time_left = g_settings.r_execution_time_limit
+    while execution_time_left >= 5:
+        g_logger.debug(f'Time Finished = '
+                       f'{str(datetime.timedelta(seconds=g_settings.r_execution_time_limit - execution_time_left))}'
+                       f', Time Left = {str(datetime.timedelta(seconds=execution_time_left))}')
+        g_logger.debug("Tmux session count = " +
+                       run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
+        time.sleep(5)
+        execution_time_left -= 5
+        if g_settings.debug:
+            delete_last_lines(2)
+    time.sleep(execution_time_left)
+    del execution_time_left
+    g_logger.debug(f'Initial time limit over (i.e. {str(datetime.timedelta(g_settings.r_execution_time_limit))})')
+    g_logger.debug("Tmux session count = " +
+                   run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
+
     at_least_one_solution_found = False
     while not check_solution_status(tmux_monitor_list):
         time.sleep(10)  # Give 10 more seconds to the running solvers
