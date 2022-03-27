@@ -297,9 +297,10 @@ class SolverOutputAnalyzer:
         return SolverOutputAnalyzer.octeract_extract_best_solution(exec_info)[0]
 
     @staticmethod
-    def octeract_check_errors(std_out_err_file_path: str) -> Tuple[bool, str]:
+    def octeract_check_errors(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
         global g_logger
-        file_txt = open(std_out_err_file_path, 'r').read()
+        file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
+
         if 'Iteration            GAP               LLB          BUB            Pool       Time       Mem' in file_txt:
             return False, 'Probably No Errors'
 
