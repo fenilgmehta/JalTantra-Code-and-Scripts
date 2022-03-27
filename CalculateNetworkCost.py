@@ -848,6 +848,22 @@ def main():
     g_logger.debug(f'{len(tmux_monitor_list)=}')
     g_logger.debug(f'{len(tmux_finished_list)=}')
     status, best_cost, best_cost_instance_exec_info = extract_best_solution(tmux_finished_list)
+    g_logger.debug((status, best_cost, str(best_cost_instance_exec_info)))
+
+    # Do not overwrite the result file of previous execution
+    # Just rename the result file of previous execution
+    if os.path.exists(g_settings.output_network_specific_result):
+        path_prefix, path_suffix = os.path.split(g_settings.output_network_specific_result)
+        new_path = None
+        for i in range(1, 10000000):
+            new_path = f'{path_prefix}_{i:07}{path_suffix}'
+            if not os.path.exists(new_path):
+                break
+        os.rename(src=g_settings.output_network_specific_result, dst=new_path)
+        g_logger.info(f"Old Solution Renamed from '{os.path.split(g_settings.output_network_specific_result)[1]}'"
+                      f" -> '{os.path.split(new_path)[1]}'")
+        del path_prefix, path_suffix, new_path
+
     if not status:
         g_logger.error('NO feasible solution found')
         run_command(f"touch '{g_settings.output_network_specific_result}'")
