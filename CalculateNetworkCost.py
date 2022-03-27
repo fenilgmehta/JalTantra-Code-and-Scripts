@@ -554,6 +554,7 @@ class AutoExecutorSettings:
         self.data_file_md5_hash: str = ''
         self.output_dir_level_1_network_specific: str = ''
         self.output_network_specific_result: str = ''
+        self.output_result_summary_file: str = ''
 
     def __update_solver_dict(self):
         # NOTE: Update `AutoExecutorSettings.AVAILABLE_SOLVERS` if keys in below dictionary are updated
@@ -602,6 +603,7 @@ class AutoExecutorSettings:
         self.output_dir_level_1_network_specific = f'{AutoExecutorSettings.OUTPUT_DIR_LEVEL_0}' \
                                                    f'/{self.data_file_md5_hash}'
         self.output_network_specific_result = self.output_dir_level_1_network_specific + '/0-result.txt'
+        self.output_result_summary_file = self.output_dir_level_1_network_specific + '/0_result_summary.txt'
 
     def start_solver(self, idx: int) -> NetworkExecutionInformation:
         """
@@ -738,16 +740,22 @@ def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) 
         ok, best solution, context of solver and model which found the best solution
     """
     global g_settings
+    all_results: List = list()  # Only used for debugging
     best_result_till_now, best_result_exec_info = float('inf'), None
     for exec_info in tmux_monitor_list:
         ok, curr_res = g_settings.solvers[exec_info.solver_name].extract_best_solution(exec_info)
-        g_logger.debug(f'solver={exec_info.solver_name}, model={exec_info.short_uniq_model_name}, {ok=}')
+        all_results.append((exec_info.solver_name, exec_info.short_uniq_model_name, ok, curr_res))
+        g_logger.info(f'solver={exec_info.solver_name}, model={exec_info.short_uniq_model_name}, {ok=}, {curr_res=}')
         # `if` solution not found by this solver instance `or` a better solution is already known, then `continue`
         if not ok or curr_res > best_result_till_now:
             continue
         g_logger.debug(f'Update best result seen till now: {curr_res} <= {best_result_till_now=}')
         best_result_till_now = curr_res
         best_result_exec_info = exec_info
+    for (solver_name, model_name, ok, res) in all_results:
+        g_logger.info(f'solver={solver_name}, model={model_name}, {ok=}, {res=}')
+        run_command(f"echo 'solver={solver_name}, model={model_name}, {ok=}, {res=}'"
+                    f" >> '{g_settings.output_result_summary_file}'")
     return best_result_exec_info is not None, best_result_till_now, best_result_exec_info
 
 
