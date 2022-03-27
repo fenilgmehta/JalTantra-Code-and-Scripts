@@ -867,29 +867,24 @@ def main():
     if not status:
         g_logger.error('NO feasible solution found')
         run_command(f"touch '{g_settings.output_network_specific_result}'")
-    else:
-        status, file_to_parse, objective_value, solution_vector = g_settings.solvers[
-            best_cost_instance_exec_info.solver_name
-        ].extract_solution_vector(best_cost_instance_exec_info)
-        g_logger.info(f'{best_cost=}')
-        g_logger.info(f'Instance={best_cost_instance_exec_info.__str__()}')
-        g_logger.info(f'Solver={best_cost_instance_exec_info.solver_name}, '
-                      f'Model={best_cost_instance_exec_info.short_uniq_model_name}')
-        run_command(f"echo '{status}'"
-                    f" >> '{g_settings.output_network_specific_result}'")
-        run_command(f"echo '{best_cost_instance_exec_info.solver_name}'"
-                    f" >> '{g_settings.output_network_specific_result}'")
-        run_command(f"echo '{best_cost_instance_exec_info.short_uniq_model_name}'"
-                    f" >> '{g_settings.output_network_specific_result}'")
-        run_command(f"echo '{best_cost_instance_exec_info.uniq_std_out_err_file_path}'"
-                    f" >> '{g_settings.output_network_specific_result}'")
-        run_command(f"echo '{best_cost}' >> '{g_settings.output_network_specific_result}'")
-        run_command(f"echo '{file_to_parse}'"
-                    f" >> '{g_settings.output_network_specific_result}'")
-        run_command(f"echo '{objective_value}'"
-                    f" >> '{g_settings.output_network_specific_result}'")
-        run_command(f"echo '{solution_vector}'"
-                    f" >> '{g_settings.output_network_specific_result}'")
+        return
+    status, file_to_parse, objective_value, solution_vector = g_settings.solvers[
+        best_cost_instance_exec_info.solver_name
+    ].extract_solution_vector(best_cost_instance_exec_info)
+    g_logger.info(f'{best_cost=}')
+    g_logger.info(f'Instance={best_cost_instance_exec_info.__str__()}')
+    g_logger.info(f'Solver={best_cost_instance_exec_info.solver_name}, '
+                  f'Model={best_cost_instance_exec_info.short_uniq_model_name}')
+    run_command(f"echo '{status}' > '{g_settings.output_network_specific_result}'")
+    run_command(f"echo '{best_cost_instance_exec_info.solver_name}' >> '{g_settings.output_network_specific_result}'")
+    run_command(f"echo '{best_cost_instance_exec_info.short_uniq_model_name}'"
+                f" >> '{g_settings.output_network_specific_result}'")
+    run_command(f"echo '{best_cost_instance_exec_info.uniq_std_out_err_file_path}'"
+                f" >> '{g_settings.output_network_specific_result}'")
+    run_command(f"echo '{best_cost}' >> '{g_settings.output_network_specific_result}'")
+    run_command(f"echo '{file_to_parse}' >> '{g_settings.output_network_specific_result}'")
+    run_command(f"echo '{objective_value}' >> '{g_settings.output_network_specific_result}'")
+    run_command(f"echo '{solution_vector}' >> '{g_settings.output_network_specific_result}'")
     pass
 
 
