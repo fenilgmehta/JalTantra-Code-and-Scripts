@@ -785,7 +785,7 @@ def main():
         tmux_finished_list.insert(0, tmux_monitor_list.pop(idx))
     del tmux_monitor_list_idx_to_remove
 
-    g_logger.debug(list(map(str, tmux_monitor_list)))
+    g_logger.debug(list(map(lambda x: x.__str__(), tmux_monitor_list)))
     if len(tmux_monitor_list) == 0:
         g_logger.warning('Failed to start all solver model sessions')
         exit(3)
