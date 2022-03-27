@@ -602,7 +602,7 @@ class AutoExecutorSettings:
         self.data_file_md5_hash = file_md5(data_file_path)
         self.output_dir_level_1_network_specific = f'{AutoExecutorSettings.OUTPUT_DIR_LEVEL_0}' \
                                                    f'/{self.data_file_md5_hash}'
-        self.output_network_specific_result = self.output_dir_level_1_network_specific + '/0-result.txt'
+        self.output_network_specific_result = self.output_dir_level_1_network_specific + '/0_result.txt'
         self.output_result_summary_file = self.output_dir_level_1_network_specific + '/0_result_summary.txt'
 
     def start_solver(self, idx: int) -> NetworkExecutionInformation:
