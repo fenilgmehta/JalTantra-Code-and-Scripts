@@ -1115,7 +1115,10 @@ if __name__ == '__main__':
     my_parser = argparse.ArgumentParser(
         prog='CalculateNetworkCost.py',
         description='Find cost of any graph/network (i.e. data/testcase file) '
-                    'by executing various solvers using different models',
+                    'by executing various solvers using different models'
+                    '\n\nNote: Baron output does not differentiate between valid and invalid solution.'
+                    'Hence, there is a possibility that this program can exit but when solution vector'
+                    'is being extracted, the program fails.',
         epilog="Enjoy the program :)",
         prefix_chars='-',
         fromfile_prefix_chars='@',
