@@ -125,6 +125,7 @@ def delete_last_lines(n=1):
     for _ in range(n):
         sys.stdout.write('\x1b[1A')  # Cursor up one line
         sys.stdout.write('\x1b[2K')  # Erase line
+    sys.stdout.flush()
 
 
 def get_free_ram() -> float:
