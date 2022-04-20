@@ -825,6 +825,7 @@ def main():
     )
 
     # Begin execution of first batch
+    run_command(f"echo 'running' > {g_settings.output_dir_level_1_network_specific}/0_status")
     for i in range(min_combination_parallel_solvers):
         exec_info = g_settings.start_solver(i)
         g_logger.debug(str(exec_info))
@@ -852,6 +853,14 @@ def main():
     g_logger.debug(list(map(lambda x: x.__str__(), tmux_monitor_list)))
     if len(tmux_monitor_list) == 0:
         g_logger.warning('Failed to start all solver model sessions')
+        run_command(f"echo 'launch_error' > {g_settings.output_dir_level_1_network_specific}/0_status")
+        for exec_info in tmux_finished_list:
+            ok, msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
+            if ok:
+                continue
+            msg = msg.replace("'", r"\'")
+            run_command(f"echo '\n---+++---\n\n{exec_info.solver_name}, {exec_info.short_uniq_model_name} >> {g_settings.output_dir_level_1_network_specific}/0_status")
+            run_command(f"echo '\n{msg}' >> {g_settings.output_dir_level_1_network_specific}/0_status")
         exit(3)
 
     # TODO: Problem: Handle case of deadlock like situation
@@ -956,7 +965,10 @@ def main():
     if not status:
         g_logger.error('NO feasible solution found')
         run_command(f"touch '{g_settings.output_network_specific_result}'")
+        run_command(f"echo 'finished:NO feasible solution found' > {g_settings.output_dir_level_1_network_specific}/0_status")
         return
+
+    run_command(f"echo 'success' > {g_settings.output_dir_level_1_network_specific}/0_status")
     status, file_to_parse, objective_value, solution_vector = g_settings.solvers[
         best_cost_instance_exec_info.solver_name
     ].extract_solution_vector(best_cost_instance_exec_info)
