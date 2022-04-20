@@ -211,6 +211,13 @@ class SolverOutputAnalyzer:
         global g_logger
         file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
         try:
+            err_idx = file_txt.index('permission denied: ./ampl.linux-intel64/ampl')
+            err_msg = file_txt.strip()
+            g_logger.debug(err_msg)
+            return False, err_msg
+        except ValueError:
+            pass  # substring not found
+        try:
             err_idx = file_txt.index('Sorry, a demo license is limited to 10 variables')
             err_msg = file_txt[err_idx:file_txt.index('exit value 1', err_idx)].replace('\n', ' ').strip()
             g_logger.debug(err_msg)
@@ -319,6 +326,23 @@ class SolverOutputAnalyzer:
             return True, 'Probably No Errors'
 
         try:
+            err_idx = file_txt.index('permission denied: ./ampl.linux-intel64/ampl')
+            err_msg = file_txt.strip()
+            g_logger.debug(err_msg)
+            return False, err_msg
+        except ValueError:
+            pass  # substring not found
+
+        try:
+            if 'Cannot invoke' in file_txt and 'Permission denied' in file_txt:
+                err_idx = file_txt.index('Permission denied')
+                err_msg = file_txt[:err_idx + len('Permission denied') + 1].strip()
+                g_logger.debug(err_msg)
+                return False, err_msg
+        except Exception as e:
+            g_logger.error(f'FIXME: {type(e)}:\n{e}')
+
+        try:
             err_idx = re.search(r'''Can't\s+find\s+file\s+['"]?.+['"]?''', file_txt).start()
             g_logger.debug(file_txt[err_idx:])
             return False, file_txt[err_idx:]
@@ -377,6 +401,27 @@ class SolverOutputAnalyzer:
             if err_idx is not None:
                 g_logger.debug(file_txt[err_idx:])
                 return False, file_txt[err_idx:]
+            pass  # substring not found
+
+        try:
+            err_idx = file_txt.index('presolve messages suppressed')
+            if '_total_solve_time' in file_txt:
+                err_msg = file_txt[:file_txt.index('_total_solve_time')]
+            else:
+                err_msg = file_txt[:err_idx + len('presolve messages suppressed') + 1]
+            err_msg = err_msg.strip()
+            g_logger.debug(err_msg)
+            return False, err_msg
+        except ValueError:
+            pass  # substring not found
+
+        try:
+            if 'all variables eliminated, but lower bound' in file_txt:
+                err_idx = file_txt.index('_total_solve_time')
+                err_msg = file_txt[:err_idx]
+                g_logger.debug(err_msg)
+                return False, err_msg
+        except ValueError:
             pass  # substring not found
 
         return True, 'No Errors'
