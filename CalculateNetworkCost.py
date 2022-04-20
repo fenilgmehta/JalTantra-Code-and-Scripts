@@ -179,7 +179,7 @@ class SolverOutputAnalyzer:
     # Baron Functions below
     @staticmethod
     def baron_extract_output_table(std_out_err_file_path: str) -> str:
-        return run_command_get_output(f"./output_table_extractor_baron.sh '{std_out_err_file_path}'", '')
+        return run_command_get_output(f"bash output_table_extractor_baron.sh '{std_out_err_file_path}'", '')
 
     @staticmethod
     def baron_extract_best_solution(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, float]:
@@ -283,7 +283,7 @@ class SolverOutputAnalyzer:
     # Octeract Functions below
     @staticmethod
     def octeract_extract_output_table(std_out_err_file_path: str) -> str:
-        return run_command_get_output(f"./output_table_extractor_octeract.sh '{std_out_err_file_path}'", '')
+        return run_command_get_output(f"bash output_table_extractor_octeract.sh '{std_out_err_file_path}'", '')
 
     @staticmethod
     def octeract_extract_best_solution(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, float]:
