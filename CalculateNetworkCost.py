@@ -860,7 +860,8 @@ def main():
             if ok:
                 continue
             msg = msg.replace("'", r"\'")
-            run_command(f"echo '\n---+++---\n\n{exec_info.solver_name}, {exec_info.short_uniq_model_name}' >> {g_settings.output_dir_level_1_network_specific}/0_status")
+            run_command(f"echo '\n---+++---\n\n{exec_info.solver_name}, {exec_info.short_uniq_model_name}'"
+                        f" >> {g_settings.output_dir_level_1_network_specific}/0_status")
             run_command(f"echo '\n{msg}' >> {g_settings.output_dir_level_1_network_specific}/0_status")
         exit(3)
 
@@ -966,7 +967,8 @@ def main():
     if not status:
         g_logger.error('NO feasible solution found')
         run_command(f"touch '{g_settings.output_network_specific_result}'")
-        run_command(f"echo 'finished:NO feasible solution found' > {g_settings.output_dir_level_1_network_specific}/0_status")
+        run_command(f"echo 'finished:NO feasible solution found'"
+                    f" > {g_settings.output_dir_level_1_network_specific}/0_status")
         return
 
     run_command(f"echo 'success' > {g_settings.output_dir_level_1_network_specific}/0_status")
