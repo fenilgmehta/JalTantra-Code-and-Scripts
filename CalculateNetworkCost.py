@@ -48,6 +48,12 @@ g_logger = logging.getLogger('CNC')
 
 # ---
 
+# True if STDOUT and STDERR are connected to terminal (and NOT "a file or a pipe")
+# REFER: https://github.com/fenilgmehta/Context-Search-fms, https://github.com/alttch/neotermcolor
+# REFER: https://stackoverflow.com/questions/1077113/how-do-i-detect-whether-sys-stdout-is-attached-to-terminal-or-not
+# NOTE: This checking of whether stdout and stderr are mapped to terminal or not is required to prevent some garbage
+#       values from inadvertently replacing starting lines of the log file to which stdout and stderr are redirected
+g_STD_OUT_ERR_TO_TERMINAL = (sys.stdout.isatty() and sys.stderr.isatty())
 # REFER: https://stackoverflow.com/questions/3172470/actual-meaning-of-shell-true-in-subprocess
 g_BASH_PATH = subprocess.check_output(['which', 'bash'], shell=False).decode().strip()
 
@@ -154,7 +160,7 @@ def get_process_running_status(pid: Union[int, str]) -> bool:
 def file_md5(file_path) -> str:
     """It is assumed that the file will exist"""
     # REFER: https://stackoverflow.com/questions/16874598/how-do-i-calculate-the-md5-checksum-of-a-file-in-python
-    global g_logger
+    global g_logger, g_STD_OUT_ERR_TO_TERMINAL
     total_bytes = os.path.getsize(file_path)
     with open(file_path, "rb") as f:
         file_hash = hashlib.md5()
@@ -166,7 +172,8 @@ def file_md5(file_path) -> str:
             new_progress = (100 * total_progress) // total_bytes
             if new_progress != last_progress_printed:
                 if g_logger.getEffectiveLevel() <= logging.INFO:
-                    delete_last_lines()
+                    if g_STD_OUT_ERR_TO_TERMINAL:
+                        delete_last_lines()
                     g_logger.info(f'Hash calculation {new_progress}% done')
                 last_progress_printed = new_progress
             chunk = f.read(8192)
@@ -876,7 +883,7 @@ def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) 
 
 
 def main():
-    global g_logger, g_settings
+    global g_logger, g_settings, g_STD_OUT_ERR_TO_TERMINAL
     run_command_get_output(f'mkdir -p "{g_settings.OUTPUT_DIR_LEVEL_0}"')
     run_command_get_output(f'mkdir -p "{g_settings.OUTPUT_DIR_LEVEL_1_DATA}"')
     run_command_get_output(f'mkdir -p "{g_settings.output_dir_level_1_network_specific}"')
@@ -956,7 +963,7 @@ def main():
                        run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
         time.sleep(5)
         execution_time_left -= 5
-        if g_settings.debug:
+        if g_settings.debug and g_STD_OUT_ERR_TO_TERMINAL:
             delete_last_lines(2)
     time.sleep(execution_time_left)
     del execution_time_left
