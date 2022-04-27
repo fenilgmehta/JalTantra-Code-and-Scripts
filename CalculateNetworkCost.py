@@ -997,14 +997,28 @@ def update_settings(args: argparse.Namespace):
 
     g_settings.debug = args.debug
 
-    # noinspection PyArgumentList
-    logging.basicConfig(
-        level=(logging.DEBUG if args.debug else logging.WARNING),
-        format='%(funcName)s :: %(message)s',
-        datefmt="[%X]",
-        handlers=[rich_RichHandler()]
-    )
-    g_logger = logging.getLogger('CNC')
+    # REFER: Context-Search-fms
+    # If STDOUT and STDERR are connected to a terminal, then use `rich` logging, otherwise simple logging
+    if (os.getenv('ANSI_COLORS_DISABLED') is None) and (sys.stdout.isatty() and sys.stderr.isatty()):
+        # noinspection PyArgumentList
+        logging.basicConfig(
+            level=(logging.DEBUG if args.debug else logging.WARNING),
+            format='%(funcName)s :: %(message)s',
+            datefmt="[%X]",
+            handlers=[rich_RichHandler()]
+        )
+        g_logger = logging.getLogger('CNC')
+    else:
+        g_logger = logging.getLogger('CNC')
+        if args.debug:
+            g_logger.setLevel(logging.DEBUG)
+        else:
+            g_logger.setLevel(logging.WARNING)
+        logger_file_handler = logging.FileHandler('/dev/stderr')
+        logger_formatter = logging.Formatter('%(levelname)s :: [%(lineno)s] %(name)s.%(funcName)s :: %(message)s')
+        logger_file_handler.setFormatter(logger_formatter)
+        g_logger.addHandler(logger_file_handler)
+        del logger_file_handler, logger_formatter
 
     g_logger.debug(args)
 
