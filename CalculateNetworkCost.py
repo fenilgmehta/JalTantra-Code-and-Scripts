@@ -392,6 +392,7 @@ class SolverOutputAnalyzer:
             g_logger.error(f'{type(e)}: {e}')
             g_logger.debug(f'{exec_info.uniq_std_out_err_file_path=}')
         except AttributeError as e:
+            # re.search failed, returned `None`
             g_logger.debug(f'{type(e)}: {e}')
             g_logger.debug(f'{exec_info.uniq_std_out_err_file_path=}')
         except Exception as e:
@@ -424,9 +425,12 @@ class SolverOutputAnalyzer:
         err_idx = None
         try:
             err_idx = file_txt.index('Error: Failed to establish connection to server.')
-            err_msg = file_txt[err_idx:file_txt.index('ampl:', err_idx)].replace('\n', ' ').strip()
-            g_logger.debug(err_msg)
-            return False, err_msg
+            if ("------------------------------------------------------------------------------------------------" not in file_txt) or "can't open /tmp/at" in file_txt:
+                err_msg = file_txt[err_idx:file_txt.index('ampl:', err_idx)].replace('\n', ' ').strip()
+                g_logger.debug(err_msg)
+                return False, err_msg
+            else:
+                g_logger.debug(f'CHECKME: {file_txt[err_idx:]=}')
         except ValueError:
             if err_idx is not None:
                 g_logger.debug(file_txt[err_idx:])
