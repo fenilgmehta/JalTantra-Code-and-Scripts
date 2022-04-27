@@ -177,7 +177,43 @@ def file_md5(file_path) -> str:
 # ---
 
 class SolverOutputAnalyzer:
-    # Baron Functions below
+    """
+    Perform output analysis (i.e. extract solution, error messages and other necessary information) for various solvers
+    """
+
+    # NOTE: Baron Functions below
+
+    """
+    ### Baron - v21.1.13
+    
+    ```sh
+    console
+      # Refer the analysis of `sum.lst` for things before execution of Control-C
+      BARON: Cntrl-C Abort
+      BARON 21.1.13 (2021.01.13): Interrupted by Control-C; objective (numberRegex)
+      Retaining scratch directory "/tmp/baron_tmp15378".
+    
+    /tmp/baron_tmp15378/sum.lst - Exact copy of console output (output after ctrl+c is not present in this file)
+      67: Doing local search
+      68: Preprocessing found feasible solution with value  (numberRegex)
+      71: Estimated remaining time for local search is [0-9]+ secs
+      72: Estimated remaining time for local search is [0-9]+ secs
+      73: Done with local search
+      75:  Iteration    Open nodes         Time (s)    Lower bound      Upper bound
+    
+    /tmp/baron_tmp15378/res.lst - Detailed output / logging of the execution and its status
+      67: Doing local search
+      68: >>> Preprocessing found feasible solution
+      69: >>> Objective value is:           (numberRegex)
+      6718:The best solution found is:
+      9659:The above solution has an objective value of:  ([0-9]+|([0-9]+)?\.[0-9]|[0-9]+(e|E)(\+)?[0-9]+)
+    
+    /tmp/baron_tmp15378/amplmodel.bar - lower bounds, upper bounds, constraints and objective (minimize/maximize) value/expression/equation/inequality with values substituted
+    
+    /tmp/baron_tmp15378/dictionary.txt - I did not understand much
+    ```
+    """
+
     @staticmethod
     def baron_extract_output_table(std_out_err_file_path: str) -> str:
         return run_command_get_output(f"bash output_table_extractor_baron.sh '{std_out_err_file_path}'", '')
@@ -281,7 +317,12 @@ class SolverOutputAnalyzer:
         # noinspection PyUnreachableCode
         return False, file_to_parse, objective_value, 'FIXME: Unhandled unknown case'
 
-    # Octeract Functions below
+    # NOTE: Octeract Functions below
+
+    """
+    Please refer to Octeract documentation for details: https://ampl.com/BOOK/CHAPTERS/
+    """
+
     @staticmethod
     def octeract_extract_output_table(std_out_err_file_path: str) -> str:
         return run_command_get_output(f"bash output_table_extractor_octeract.sh '{std_out_err_file_path}'", '')
