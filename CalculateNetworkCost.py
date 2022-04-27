@@ -1064,9 +1064,17 @@ def main():
 
     if not status:
         g_logger.error('NO feasible solution found')
-        run_command(f"touch '{g_settings.output_network_specific_result}'")
+        run_command(f"echo '{status}' > '{g_settings.output_network_specific_result}'")
         run_command(f"echo 'finished:Either some unknown error, or NO feasible solution found'"
                     f" > {g_settings.output_dir_level_1_network_specific}/0_status")
+        for exec_info in tmux_finished_list:
+            ok, msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
+            if ok:
+                continue
+            msg = msg.replace("'", "'\"'\"'")
+            run_command(f"echo '\n---+++---\n\n{exec_info.solver_name}, {exec_info.short_uniq_model_name}'"
+                        f" >> {g_settings.output_dir_level_1_network_specific}/0_status")
+            run_command(f"echo '\n{msg}' >> {g_settings.output_dir_level_1_network_specific}/0_status")
         return
 
     run_command(f"echo 'success' > {g_settings.output_dir_level_1_network_specific}/0_status")
