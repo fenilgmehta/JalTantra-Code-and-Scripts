@@ -967,8 +967,15 @@ def main():
             g_logger.error(err_msg)
 
     at_least_one_solution_found = False
+    extra_time_given = 0
     while not check_solution_status(tmux_monitor_list):
+        extra_time_given += 10
         time.sleep(10)  # Give 10 more seconds to the running solvers
+        # TODO: NOTE: In future, this too can be taken as a command line parameter
+        # Maximum 5 minutes extra time is given
+        if extra_time_given >= 300:
+            break
+    del extra_time_given
     at_least_one_solution_found = True
 
     # Begin execution of next batch
@@ -1033,7 +1040,7 @@ def main():
     if not status:
         g_logger.error('NO feasible solution found')
         run_command(f"touch '{g_settings.output_network_specific_result}'")
-        run_command(f"echo 'finished:NO feasible solution found'"
+        run_command(f"echo 'finished:Either some unknown error, or NO feasible solution found'"
                     f" > {g_settings.output_dir_level_1_network_specific}/0_status")
         return
 
