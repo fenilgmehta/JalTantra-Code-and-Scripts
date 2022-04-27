@@ -961,15 +961,25 @@ def main():
                        f', Time Left = {str(datetime.timedelta(seconds=execution_time_left))}')
         g_logger.debug("Tmux session count = " +
                        run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
+        if run_command(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l')[0]:
+            g_logger.info(f'{execution_time_left=}')
+            g_logger.info('CHECKME: Skipping the sleep/wait operation as no tmux session is '
+                          'running, probably some error or the solver(s) exited early')
+            tmux_finished_list.extend(tmux_monitor_list)
+            tmux_monitor_list.clear()
+            break
         time.sleep(5)
         execution_time_left -= 5
         if g_settings.debug and g_STD_OUT_ERR_TO_TERMINAL:
             delete_last_lines(2)
-    time.sleep(execution_time_left)
+    if execution_time_left <= 5:
+        time.sleep(execution_time_left)
+        g_logger.debug(f'Initial time limit over (i.e. {str(datetime.timedelta(g_settings.r_execution_time_limit))})')
+        g_logger.debug("Tmux session count = " +
+                       run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
+    else:
+        g_logger.debug('while loop forcefully stopped using `break` as no `tmux` session were running')
     del execution_time_left
-    g_logger.debug(f'Initial time limit over (i.e. {str(datetime.timedelta(g_settings.r_execution_time_limit))})')
-    g_logger.debug("Tmux session count = " +
-                   run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
 
     # Error checking - Round 2
     for exec_info in tmux_original_list:
@@ -980,12 +990,14 @@ def main():
 
     at_least_one_solution_found = False
     extra_time_given = 0
-    while not check_solution_status(tmux_monitor_list):
-        extra_time_given += 10
-        time.sleep(10)  # Give 10 more seconds to the running solvers
+    while len(tmux_monitor_list) > 0 and (not check_solution_status(tmux_monitor_list)):
+        extra_time_given += 30
+        g_logger.debug(f'Extra time given = {extra_time_given} of 300 seconds')
+        time.sleep(30)  # Give 30 more seconds to the running solvers
         # TODO: NOTE: In future, this too can be taken as a command line parameter
         # Maximum 5 minutes extra time is given
         if extra_time_given >= 300:
+            g_logger.debug('"Extra time" limit reached')
             break
     del extra_time_given
     at_least_one_solution_found = True
@@ -1020,6 +1032,7 @@ def main():
         g_logger.debug(f'{len(tmux_finished_list)=}')
 
     # Error checking - Round 3 (last round)
+    g_logger.debug('Error checking - Round 3 (last round)')
     for exec_info in tmux_original_list:
         ok, err_msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
         if not ok:
