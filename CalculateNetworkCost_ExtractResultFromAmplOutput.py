@@ -58,7 +58,7 @@ if not os.path.isfile(IN_NETWORK_FILE_PATH):
 # ---
 
 # Step 2: Read the file and extract only the necessary section using `awk`
-cmd = """cat '""" + IN_STD_OUT_ERR_FILE_PATH.replace("'", r"\'") + r"""' | awk '
+cmd = """cat '""" + IN_STD_OUT_ERR_FILE_PATH.replace("'", "'\"'\"'") + r"""' | awk '
 /^_total_solve_time.*/ { f += f; }
 /^:\s*q1\s*q2\s*:=/ { f += 1; }
 /^q\s*:=/ { f += 1; }
@@ -93,10 +93,10 @@ del ampl_output, line
 # Step 4: NOTE: Read `arc_len_expected` from network file (`IN_NETWORK_FILE_PATH`) which was
 #               used to get ".../std_out_err.txt" and validate `arc_len_calculated`
 
-ok, output = run_command("cat '{}'".format(IN_NETWORK_FILE_PATH.replace("'", r"\'")))
+ok, output = run_command("cat '{}'".format(IN_NETWORK_FILE_PATH.replace("'", "'\"'\"'")))
 if not ok:
     print('ERROR: `run_command` failed for cmd:\n\t\t' +
-          "cat '{}'".format(IN_NETWORK_FILE_PATH.replace("'", r"\'")), file=sys.stderr)
+          "cat '{}'".format(IN_NETWORK_FILE_PATH.replace("'", "'\"'\"'")), file=sys.stderr)
     print(f'DEBUG: {output=}', file=sys.stderr)
     exit(1)
 network_file_data = output.splitlines(keepends=False)
