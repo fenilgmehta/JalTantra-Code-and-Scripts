@@ -16,7 +16,7 @@ EXECUTION_TIME_LIMIT = (4 * 60 * 60) + (1 * 60) + 0  # Seconds, set this to any 
 MIN_FREE_RAM = 2  # GiB
 MIN_FREE_SWAP = 8  # GiB, will only be used if "MIN_FREE_RAM == 0"
 
-# NOTE: Use double quotes ONLY in the below variables three
+# NOTE: Use "double quotes ONLY" in the below variables three
 # engine_path = './octeract-engine-4.0.0/bin/octeract-engine'
 # engine_options = f'options octeract_options "num_cores={CPU_CORES_PER_SOLVER}";'
 # process_name_to_stop_using_ctrl_c = 'mpirun' if CPU_CORES_PER_SOLVER > 1 else 'octeract-engine'
