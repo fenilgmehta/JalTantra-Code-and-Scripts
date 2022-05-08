@@ -339,6 +339,21 @@ class SolverOutputAnalyzer:
         """The processing done by this function depends on the output format of `extract_solution_octeract(...)` method"""
         global g_logger
 
+        # Custom checking for exceptional situations
+        file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
+        if 'Found solution during preprocessing' in file_txt:
+            try:
+                best_solution = float(re.search(r'Objective value at global solution:\s*(.*)\s*', file_txt).group(1))
+                g_logger.debug(f'Solver found the solution during preprocessing, {best_solution=}')
+                return True, best_solution
+            except:
+                g_logger.error(f'FIXME: Found solution during preprocessing. But, failed to extract the objective '
+                               f'function value. Few lines from {exec_info.uniq_std_out_err_file_path=}:')
+                idx_found_solution = file_txt.find('Found solution during preprocessing')
+                g_logger.debug(file_txt[file_txt.rfind('\n', 0, idx_found_solution - 50) + 1:
+                                        file_txt.find('\n', idx_found_solution + 120)])
+                pass
+
         # Use bash script to extract the values from the table printed to output by Octeract
         csv = SolverOutputAnalyzer.octeract_extract_output_table(exec_info.uniq_std_out_err_file_path)
         if csv == '':
@@ -373,6 +388,8 @@ class SolverOutputAnalyzer:
         global g_logger
         file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
 
+        if 'Found solution during preprocessing' in file_txt:
+            return True, 'Solution found during preprocessing'
         if 'Iteration            GAP               LLB          BUB            Pool       Time       Mem' in file_txt:
             return True, 'Probably No Errors'
 
