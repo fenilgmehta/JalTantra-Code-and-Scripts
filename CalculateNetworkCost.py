@@ -338,6 +338,8 @@ class SolverOutputAnalyzer:
     def octeract_extract_best_solution(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, float]:
         """The processing done by this function depends on the output format of `extract_solution_octeract(...)` method"""
         global g_logger
+
+        # Use bash script to extract the values from the table printed to output by Octeract
         csv = SolverOutputAnalyzer.octeract_extract_output_table(exec_info.uniq_std_out_err_file_path)
         if csv == '':
             return False, 0.0
@@ -374,6 +376,7 @@ class SolverOutputAnalyzer:
         if 'Iteration            GAP               LLB          BUB            Pool       Time       Mem' in file_txt:
             return True, 'Probably No Errors'
 
+        # Execute permission not available for AMPL
         try:
             err_idx = file_txt.index('permission denied: ./ampl.linux-intel64/ampl')
             err_msg = file_txt.strip()
@@ -382,6 +385,7 @@ class SolverOutputAnalyzer:
         except ValueError:
             pass  # substring not found
 
+        # Execute permission not available for Solver
         try:
             if 'Cannot invoke' in file_txt and 'Permission denied' in file_txt:
                 err_idx = file_txt.index('Permission denied')
@@ -417,6 +421,7 @@ class SolverOutputAnalyzer:
                 return False, file_txt[err_idx:]
             pass  # substring not found
 
+        # AMPL demo licence limitation
         err_idx = None
         try:
             err_idx = file_txt.index('Sorry, a demo license for AMPL is limited to 300 variables')
@@ -429,6 +434,8 @@ class SolverOutputAnalyzer:
                 return False, file_txt[err_idx:]
             pass  # substring not found
 
+        # Octeract solver failed to establish connection to their server. Hence, it does not proceed
+        # with the solving.
         err_idx = None
         try:
             err_idx = file_txt.index('Error: Failed to establish connection to server.')
@@ -916,7 +923,7 @@ def main():
         tmux_monitor_list.append(exec_info)
         g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
         time.sleep(0.2)
-        g_logger.debug(len(tmux_monitor_list))
+        g_logger.debug(f'{len(tmux_monitor_list)=}')
 
     # Error checking - Round 1
     tmux_monitor_list_idx_to_remove = list()
