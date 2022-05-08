@@ -770,12 +770,16 @@ echo $$ > "{info.uniq_pid_file_path}"
     model "{info.models_dir}/{info.model_name}";
     data "{info.data_file_path}";
     option solver "{info.engine_path}";
+    option presolve_eps 1e-9;
     {info.engine_options};
     solve;
     ''' + r'''
     display _total_solve_time;
     option display_1col 9223372036854775807;
-    option display_eps 1e-8;
+    option display_precision 6;
+    display {i in nodes} h[i];
+    display {(i,j) in arcs} ''' + ("q[i,j]" if (info.short_uniq_model_name in ("m1", "m3")) else "(q1[i,j], q2[i,j])") + ''';
+    option display_eps 1e-4;
     option omit_zero_rows 1;
     display {(i,j) in arcs, k in pipes} l[i,j,k];
     display _total_solve_time;
