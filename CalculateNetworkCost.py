@@ -974,7 +974,7 @@ def main():
             delete_last_lines(2)
     if execution_time_left <= 5:
         time.sleep(execution_time_left)
-        g_logger.debug(f'Initial time limit over (i.e. {str(datetime.timedelta(g_settings.r_execution_time_limit))})')
+        g_logger.debug(f'Initial time limit over (i.e. {str(datetime.timedelta(seconds=g_settings.r_execution_time_limit))})')
         g_logger.debug("Tmux session count = " +
                        run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
     else:
