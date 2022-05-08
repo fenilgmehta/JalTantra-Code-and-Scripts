@@ -18,14 +18,15 @@ param S{nodes, links};			### Matrix for flow Direction in Spanning Tree
 param C{cycle, links};			### Cycle Flow Direction Matrix
 
 ### Undefined parameters ###
-param q_M := -demand['Node1'];	### Upper bound on flow variable
+param q_M := -demand['Node1'];	### Upper bound on flow variable (NOTE: Here, probably it is assumed that Node1 is the source)
+								### `-D[Source]` is used because demand of source is `-1 * sum(demand of other nodes)`
 param q_m := 10^(-30);			### Lower bound on flow variable
 param omega := 10.68;			### SI Unit Constant for Hazen Williams Equation
 
 ### VARIABLES ###
-var l{links, pipes}, >= 0;
-var q1{links}, >= q_m,<=q_M;
-var q2{links}, >= q_m,<=q_M;
+var l{links, pipes}, >= 0;		### Length of each pipe link
+var q1{links}, >= q_m,<=q_M;	### Flow variable
+var q2{links}, >= q_m,<=q_M;	### Flow variable
 var x1 binary;
 
 ### OBJECTIVE ###

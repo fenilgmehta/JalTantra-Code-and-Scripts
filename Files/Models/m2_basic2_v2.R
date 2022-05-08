@@ -16,6 +16,7 @@ param Source;
 
 ### Undefined parameters ###
 param q_M := -D[Source];		### Upper bound on flow variable
+								### `-D[Source]` is used because demand of source is `-1 * sum(demand of other nodes)`
 param q_m := 0;					### Lower bound on flow variable
 param omega := 10.68;			### SI Unit Constant for Hazen Williams Equation
 
@@ -23,7 +24,7 @@ param omega := 10.68;			### SI Unit Constant for Hazen Williams Equation
 var l{arcs,pipes} >= 0;			### Length of each pipe link
 var q1{arcs}, >= q_m, <= q_M;	### Flow variable
 var q2{arcs}, >= q_m, <= q_M;	### Flow variable
-var h{nodes};
+var h{nodes};					### Head
 
 ### OBJECTIVE ###
 minimize total_cost : sum{(i,j) in arcs} sum{k in pipes}l[i,j,k]*C[k];	### Total cost as a sum of price per unit pipe * length of pipe
