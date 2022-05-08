@@ -1,25 +1,64 @@
+#!/ampl.linux-intel64/ampl
+
+# REFER: https://optirisk-systems.com/wp-content/uploads/2018/05/AMPLDevExtract.pdf
+# NOTE: Also refer CalculateNetworkCost.py > class AutoExecutorSettings > start_solver(self, idx)
+#       for the statements which can be and/or are to be used for execution
+
 reset;
 
-# Configurations for BARON
-# Give relative/absolute path to the solver from directory from which AMPL was executed
-option solver baron;
-option baron_options 'outlev 1 maxtime 3600';
-option display_round 3;
+## *** AMPL options
+## REFER: https://ampl.com/BOOK/CHAPTERS/17-solvers.pdf
 option presolve_eps 1e-9;
+## REFER: https://ampl.com/BOOK/CHAPTERS/15-display.pdf
+## Chapter 15, Page 234:  To specify rounding to a fixed number of decimal places, regardless of the resulting precision, you may set the option display_round. A nonnegative value specifies the number of digits to appear after the decimal point.
+# option display_round 3;
 
-# Change models here
-model Models/m3_descrete_segment.mod;
+## ----------
 
-# Use the below line for models m1 and m2 (i.e. basic and basic2) else the line after
-# data Data/m1_m2/d2_Sample_input_cycle_hanoi.dat;
-data Data/m3_m4/d2_Sample_input_cycle_hanoi.dat;
+## *** Solver Configuration
+## Give absolute path or relative path to the solver from the directory from which AMPL was executed
+
+## Solver: Baron
+option solver "./ampl.linux-intel64/baron";
+option baron_options "threads=1 barstats keepsol lsolmsg outlev=1 prfreq=100 prtime=2 problem";  # maxtime=300 (i.e. 5 minutes)
+
+## Solver: Octeract, REFER: https://docs.octeract.com/htg1001-how_to_use_ampl_with_octeract_engine
+# option solver "./octeract-engine-4.0.0/bin/octeract-engine";
+# options octeract_options "num_cores=1";
+
+## Solver: Gurobi
+# option solver "ampl_gurobi-engine/gurobi_ampl";
+
+## ----------
+
+## *** Change model here
+model "./Files/Models/m2_basic2_v2.R"
+
+## *** Use the below line for models m1 and m2 (i.e. basic and basic2) else the line after
+data "./Files/Data/m1_m2/d1_Sample_input_cycle_twoloop.dat"
+# data "./Files/Data/m3_m4/d1_Sample_input_cycle_twoloop.dat"
 
 solve;
 
-display _total_solve_time;
+## ----------
 
-display l;
+	## Print the total execution time
+	display _total_solve_time;
 
-# Use the below line (q1,q2) for models m2 and m4 (i.e. basic2 and parallel_links) else the line after (use just q)
-# display q1,q2;
-display q
+## Chapter 15, Page 227-228: If number of values in an array/matrix is <= 2**63 - 1, then print the variable as list, otherwise print as matrix
+option display_1col 9223372036854775807;
+## Chapter 15, Page 232-233: Display full precision for all values
+option display_precision 6;
+
+	## Print the head and flow values
+	display {i in nodes} h[i];
+	display {(i,j) in arcs} q[i,j]  # Use `q[i,j]` for m1 & m3, AND `(q1[i,j], q2[i,j])` for m2 & m4 (i.e. basic2 and parallel_links)
+
+## Chapter 15, Page 234-235: Any value whose magnitude is less than the value of `display_eps` is treated as an exact zero in all output of `display`
+option display_eps 1e-4;
+## Chapter 15, Page 231: By setting omit_zero_rows to 1, all the zero values are suppressed, and the list comes down to the entries of interest
+option omit_zero_rows 1;
+
+	## Print the length of each pipe which is to be used for each arc/edge
+	# display l;
+	display {(i,j) in arcs, k in pipes} l[i,j,k];  # OR, print {(i,j) in arcs, k in pipes} l[i,j,k];
