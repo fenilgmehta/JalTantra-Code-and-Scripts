@@ -192,14 +192,14 @@ class SolverOutputAnalyzer:
 
     """
     ### Baron - v21.1.13
-    
+
     ```sh
     console
       # Refer the analysis of `sum.lst` for things before execution of Control-C
       BARON: Cntrl-C Abort
       BARON 21.1.13 (2021.01.13): Interrupted by Control-C; objective (numberRegex)
       Retaining scratch directory "/tmp/baron_tmp15378".
-    
+
     /tmp/baron_tmp15378/sum.lst - Exact copy of console output (output after ctrl+c is not present in this file)
       67: Doing local search
       68: Preprocessing found feasible solution with value  (numberRegex)
@@ -207,16 +207,16 @@ class SolverOutputAnalyzer:
       72: Estimated remaining time for local search is [0-9]+ secs
       73: Done with local search
       75:  Iteration    Open nodes         Time (s)    Lower bound      Upper bound
-    
+
     /tmp/baron_tmp15378/res.lst - Detailed output / logging of the execution and its status
       67: Doing local search
       68: >>> Preprocessing found feasible solution
       69: >>> Objective value is:           (numberRegex)
       6718:The best solution found is:
       9659:The above solution has an objective value of:  ([0-9]+|([0-9]+)?\.[0-9]|[0-9]+(e|E)(\+)?[0-9]+)
-    
+
     /tmp/baron_tmp15378/amplmodel.bar - lower bounds, upper bounds, constraints and objective (minimize/maximize) value/expression/equation/inequality with values substituted
-    
+
     /tmp/baron_tmp15378/dictionary.txt - I did not understand much
     ```
     """
@@ -432,7 +432,8 @@ class SolverOutputAnalyzer:
         err_idx = None
         try:
             err_idx = file_txt.index('Error: Failed to establish connection to server.')
-            if ("------------------------------------------------------------------------------------------------" not in file_txt) or "can't open /tmp/at" in file_txt:
+            if ("----------------------------------------------------------------------"
+                "--------------------------" not in file_txt) or "can't open /tmp/at" in file_txt:
                 err_msg = file_txt[err_idx:file_txt.index('ampl:', err_idx)].replace('\n', ' ').strip()
                 g_logger.debug(err_msg)
                 return False, err_msg
@@ -974,7 +975,8 @@ def main():
             delete_last_lines(2)
     if execution_time_left <= 5:
         time.sleep(execution_time_left)
-        g_logger.debug(f'Initial time limit over (i.e. {str(datetime.timedelta(seconds=g_settings.r_execution_time_limit))})')
+        g_logger.debug(f'Initial time limit over '
+                       f'(i.e. {str(datetime.timedelta(seconds=g_settings.r_execution_time_limit))})')
         g_logger.debug("Tmux session count = " +
                        run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
     else:
