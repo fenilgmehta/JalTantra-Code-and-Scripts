@@ -760,27 +760,8 @@ class AutoExecutorSettings:
         # NOTE: The statement `echo > /dev/null` is required to make the below command work. Without
         #       it, AMPL is not started. Probably, it has something to do with the `EOF` thing.
         # NOTE: The order of > and 2>&1 matters in the below command
-
-        """
-        display _total_solve_time;
-
-        # # REFER: https://ampl.com/BOOK/CHAPTERS/15-display.pdf
-        # # Page 232-233: Display full precision for all values
-        # option display_precision 0;
-        # # Page 227-228: If number of values in an array/matrix is <= 2**63 - 1, then print the variable as list, otherwise print as matrix
-        option display_1col 9223372036854775807;
-        # # Page 234-235: Any value whose magnitude is less than the value of `display_eps` is treated as an exact zero in all output of `display`
-        option display_eps 1e-8;
-        # # Page 231: By setting omit_zero_rows to 1, all the zero values are suppressed, and the list comes down to the entries of interest
-        option omit_zero_rows 1;
-        # # Print the solution matrix
-        # print {(i,j) in arcs, k in pipes} l[i,j,k];
-        # display l;
-        display {(i,j) in arcs, k in pipes} l[i,j,k];
-
-        # display {"q1,q2" if (info.short_uniq_model_name in ("m2", "m4")) else "q"};
-        display _total_solve_time;
-        """
+        # REFER: https://github.com/fenilgmehta/Jaltantra-Code-and-Scripts/blob/main/Files/main.run
+        #        For AMPL commands
         run_command_get_output(rf'''
             tmux new-session -d -s '{info.uniq_tmux_session_name}' '
 echo $$ > "{info.uniq_pid_file_path}"
