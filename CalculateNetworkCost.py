@@ -485,6 +485,16 @@ class SolverOutputAnalyzer:
         except ValueError:
             pass  # substring not found
 
+        # Solver did not proceed due to some impossible situations, e.g. X should be <= 3 and >= 7
+        try:
+            if '_total_solve_time = 0' in file_txt:
+                err_idx = file_txt.index('presolve:')
+                err_msg = file_txt[err_idx: file_txt.index('_total_solve_time')]
+                g_logger.debug(err_msg)
+                return False, err_msg
+        except ValueError:
+            pass  # substring not found
+
         return True, 'No Errors'
 
     @staticmethod
