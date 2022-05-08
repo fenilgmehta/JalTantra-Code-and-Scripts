@@ -882,6 +882,14 @@ def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) 
     Returns:
         ok, best solution, context of solver and model which found the best solution
     """
+    # TODO: Update this to extract best solution based on true objective function value and not approx value.
+    #       The current code works for almost all cases. However, I think there can be some corner case were
+    #       a slightly suboptimal solution "may get selected as the best solution" due to the rounding off (that
+    #       happens due to the Scientific Notation of numbers) that is done by the Solvers like Baron and
+    #       Octeract when printing the table which represents the state of the execution.
+    #       Example: 420128.37368597434 from at49157.octsol for "octeract_m2_998a075a3545f6e8045a9c6538dbba2a"
+    #                becomes 4.201e+05
+    #       Possible Solution: Print the variable `total_cost` using the `display` command of AMPL
     global g_settings
     all_results: List = list()  # Only used for debugging
     best_result_till_now, best_result_exec_info = float('inf'), None
