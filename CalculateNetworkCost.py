@@ -961,7 +961,7 @@ def main():
                        f', Time Left = {str(datetime.timedelta(seconds=execution_time_left))}')
         g_logger.debug("Tmux session count = " +
                        run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
-        if run_command(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l')[0]:
+        if run_command(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l')[1] == '0':
             g_logger.info(f'{execution_time_left=}')
             g_logger.info('CHECKME: Skipping the sleep/wait operation as no tmux session is '
                           'running, probably some error or the solver(s) exited early')
