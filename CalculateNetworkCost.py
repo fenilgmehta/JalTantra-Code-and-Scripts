@@ -947,6 +947,10 @@ def main():
     g_logger.debug(list(map(lambda x: x.__str__(), tmux_monitor_list)))
     if len(tmux_monitor_list) == 0:
         g_logger.warning('Failed to start all solver model sessions')
+        # Sleep for some time so that AMPL and the solver can finish their termination properly, and write the
+        # appropriate error messages to STDOUT (which are redirected to "Solver_m1_NetworkHash/std_out_err.txt")
+        g_logger.debug('Sleep for 20 seconds for AMPL and the solver to terminate properly')
+        time.sleep(20)
         run_command(f"echo 'launch_error' > {g_settings.output_dir_level_1_network_specific}/0_status")
         for exec_info in tmux_finished_list:
             ok, msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
