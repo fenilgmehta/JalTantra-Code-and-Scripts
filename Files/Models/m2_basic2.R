@@ -1,17 +1,17 @@
 ### SETS ###
-set nodes;			### Set of nodes
-set arcs within {i in nodes, j in nodes: i != j};
-set pipes;			### Set of pipes available
+set nodes;			### Set of nodes/vertexes
+set pipes;			### Set of commercial pipes available
+set arcs within {i in nodes, j in nodes: i != j};	### Set of arcs/links/edges
 
 ### PARAMETERS ###
-param d{pipes};		### Diameter of each pipe
-param L{arcs};		### Total length of each link
-param E{nodes};		### Elevation of all nodes including the source
-param D{nodes};		### Demand of each node except the source node
-param C{pipes};		### Cost per unit length for each commercially available pipe
-param R{pipes};		### Roughness of available
+param L{arcs};		### Total length of each arc/link
+param E{nodes};		### Elevation of each node
 param P{nodes};		### Minimum pressure required at each node
-param Source;
+param D{nodes};		### Demand of each node
+param d{pipes};		### Diameter of each commercial pipe
+param C{pipes};		### Cost per unit length of each commercial pipe
+param R{pipes};		### Roughness of each commercial pipe
+param Source;		### Source node ID
 param S{nodes,arcs};
 
 ### Undefined parameters ###
@@ -21,13 +21,13 @@ param q_m := 10**-20;			### Lower bound on flow variable
 param omega := 10.68;			### SI Unit Constant for Hazen Williams Equation
 
 ### VARIABLES ###
-var l{arcs,pipes} >= 0;			### Length of each pipe link
+var l{arcs,pipes} >= 0;			### Length of each commercial pipe for each arc/link
 var q1{arcs}, >= q_m, <= q_M;	### Flow variable
 var q2{arcs}, >= q_m, <= q_M;	### Flow variable
 var h{nodes};					### Head
 
 ### OBJECTIVE ###
-minimize total_cost : sum{(i,j) in arcs} sum{k in pipes}l[i,j,k]*C[k];	### Total cost as a sum of price per unit pipe * length of pipe
+minimize total_cost : sum{(i,j) in arcs} sum{k in pipes}l[i,j,k]*C[k];	### Total cost as a sum of "length of the commercial pipe * cost per unit length of the commercial pipe"
 
 ### Variable bounds ###
 s.t. bound1{(i,j) in arcs, k in pipes}: l[i,j,k] <= L[i,j];
