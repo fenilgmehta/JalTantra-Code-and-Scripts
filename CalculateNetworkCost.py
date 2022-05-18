@@ -911,9 +911,9 @@ def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) 
         all_results.append((exec_info.solver_name, exec_info.short_uniq_model_name, ok, curr_res))
         g_logger.info(f'solver={exec_info.solver_name}, model={exec_info.short_uniq_model_name}, {ok=}, {curr_res=}')
         # `if` solution not found by this solver instance `or` a better solution is already known, then `continue`
-        if not ok or curr_res > best_result_till_now:
+        if not ok or curr_res >= best_result_till_now:
             continue
-        g_logger.debug(f'Update best result seen till now: {curr_res} <= {best_result_till_now=}')
+        g_logger.debug(f'Update best result seen till now: {curr_res} < {best_result_till_now=}')
         best_result_till_now = curr_res
         best_result_exec_info = exec_info
     for (solver_name, model_name, ok, res) in all_results:
