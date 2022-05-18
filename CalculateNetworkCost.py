@@ -824,8 +824,8 @@ class MonitorAndStopper:
             return
         # NOTE: It is the below TODO item which resulted in lots of changes
         #       to the code and in turn improving the program structure :)
-        # TODO: Dynamically find the value of `process_name_to_stop_using_ctrl_c` based on solver name and PID
-        #       May have to update the `pids_to_monitor` list to store solver name along with the PID
+        # TODO: Dynamically find the value of `process_name_to_stop_using_ctrl_c` based on solver name and PID.
+        #       May have to update the `pids_to_monitor` list to store solver name along with the PID.
 
         # Index of elements of `tmux_monitor_list` which were/have stopped.
         tmux_finished_list_idx: List[int] = list()
@@ -892,6 +892,14 @@ def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) 
     #       a slightly suboptimal solution "may get selected as the best solution" due to the rounding off (that
     #       happens due to the Scientific Notation of numbers) that is done by the Solvers like Baron and
     #       Octeract when printing the table which represents the state of the execution.
+    #       Example: For input file "Sample_input_cycle_parallel.xls", the network file with MD5 hash
+    #                564e0fbdda308d4f83f0932e52d51eaf is generated. Model m1 give global optimal solution
+    #                and m2 is not able to find global optimum. But, this function will say that m2 is better
+    #                because of the rounding error described above. Following are the true solution of m1 and m2:
+    #                m1 = 14902767.473646978, m2 = 14902767.473647203
+    #                For checking whether the solver-model combination solved the input to global optimum
+    #                or not, the following condition seems enought:
+    #                    octsolJson['statistics']['dgo_exit_status'] == 'Solved_To_Global_Optimality'
     #       Example: 420128.37368597434 from at49157.octsol for "octeract_m2_998a075a3545f6e8045a9c6538dbba2a"
     #                becomes 4.201e+05
     #       Possible Solution: Print the variable `total_cost` using the `display` command of AMPL
