@@ -12,6 +12,7 @@ FILE_PATH=$(dirname "$0")
 cd "${FILE_PATH}"
 
 echo >> log_jaltantra_CalculateNetworkCost_JaltantraLauncher.log
+echo "date    = '$(date)'" >> log_jaltantra_CalculateNetworkCost_JaltantraLauncher.log
 echo "whoami  = '$(whoami)'" >> log_jaltantra_CalculateNetworkCost_JaltantraLauncher.log
 echo "pwd     = '$(pwd)'" >> log_jaltantra_CalculateNetworkCost_JaltantraLauncher.log
 echo "\$0      = '${0}'" >> log_jaltantra_CalculateNetworkCost_JaltantraLauncher.log
