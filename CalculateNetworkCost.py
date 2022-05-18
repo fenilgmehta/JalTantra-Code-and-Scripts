@@ -580,6 +580,11 @@ class NetworkExecutionInformation:
         return f'NetworkExecutionInformation[pid={self.tmux_bash_pid}, idx={self.idx}, solver={self.solver_name}, ' \
                f'model={self.short_uniq_model_name}]'
 
+    def __repr__(self):
+        # REFER: https://stackoverflow.com/questions/727761/python-str-and-lists
+        # REFER: https://docs.python.org/2/reference/datamodel.html#object.__repr__
+        return self.__str__()
+
 
 class SolverInformation:
     def __init__(self, engine_path: str, engine_options: str, process_name_to_stop_using_ctrl_c: str,
