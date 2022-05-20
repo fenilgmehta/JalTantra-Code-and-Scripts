@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 import time
+import traceback
 from typing import List, Tuple, Union, Dict, Optional
 
 from rich.logging import RichHandler as rich_RichHandler
@@ -1371,4 +1372,9 @@ if __name__ == '__main__':
                            help='Print debug information.')
 
     update_settings(my_parser.parse_args())
-    main()
+    g_logger.info('START main program')
+    try:
+        main()
+    except Exception as e:
+        g_logger.error(f'FIXME: {type(e)},\n\nException e:\n{e}\n\ntrace:\n{traceback.format_exc()}')
+    g_logger.info('FINISHED main program')
