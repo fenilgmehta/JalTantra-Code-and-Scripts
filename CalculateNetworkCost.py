@@ -158,13 +158,17 @@ def get_process_running_status(pid: Union[int, str]) -> bool:
     return run_command(f'ps -p {pid}')[0]
 
 
-def file_md5(file_path) -> str:
-    """It is assumed that the file will exist"""
+def file_hash_sha256(file_path) -> str:
+    """
+    It is assumed that the file will exist
+
+    This is same as `shasum -a 256 FilePath`. REFER: https://en.wikipedia.org/wiki/Secure_Hash_Algorithms
+    """
     # REFER: https://stackoverflow.com/questions/16874598/how-do-i-calculate-the-md5-checksum-of-a-file-in-python
     global g_logger, g_STD_OUT_ERR_TO_TERMINAL
     total_bytes = os.path.getsize(file_path)
     with open(file_path, "rb") as f:
-        file_hash = hashlib.md5()
+        file_hash = hashlib.sha256()
         chunk = f.read(8192)
         total_progress = min(len(chunk), total_bytes)
         last_progress_printed = -1
@@ -559,7 +563,7 @@ class NetworkExecutionInformation:
         #        Q. What is the maximum length of session name that can be set using
         #           the following command: `tmux new -s 'SessionName_12345'`
         #        A. There is no defined limit.
-        self.short_uniq_data_file_name: str = aes.data_file_md5_hash
+        self.short_uniq_data_file_name: str = aes.data_file_hash
         self.short_uniq_combination: str = f'{self.solver_name}_' \
                                            f'{self.short_uniq_model_name}_{self.short_uniq_data_file_name}'
         g_logger.debug((type(self.short_uniq_model_name), type(self.short_uniq_data_file_name),
@@ -690,7 +694,7 @@ class AutoExecutorSettings:
         self.solver_model_combinations: List[Tuple[str, str]] = list()
         # Path to graph/network (i.e. data/testcase file)
         self.data_file_path: str = ''
-        self.data_file_md5_hash: str = ''
+        self.data_file_hash: str = ''
         self.output_dir_level_1_network_specific: str = ''
         self.output_network_specific_result: str = ''
         self.output_result_summary_file: str = ''
@@ -738,9 +742,9 @@ class AutoExecutorSettings:
 
     def set_data_file_path(self, data_file_path: str) -> None:
         self.data_file_path = data_file_path
-        self.data_file_md5_hash = file_md5(data_file_path)
+        self.data_file_hash = file_hash_sha256(data_file_path)
         self.output_dir_level_1_network_specific = f'{AutoExecutorSettings.OUTPUT_DIR_LEVEL_0}' \
-                                                   f'/{self.data_file_md5_hash}'
+                                                   f'/{self.data_file_hash}'
         self.output_network_specific_result = self.output_dir_level_1_network_specific + '/0_result.txt'
         self.output_result_summary_file = self.output_dir_level_1_network_specific + '/0_result_summary.txt'
 
@@ -893,17 +897,28 @@ def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) 
     #       a slightly suboptimal solution "may get selected as the best solution" due to the rounding off (that
     #       happens due to the Scientific Notation of numbers) that is done by the Solvers like Baron and
     #       Octeract when printing the table which represents the state of the execution.
-    #       Example: For input file "Sample_input_cycle_parallel.xls", the network file with MD5 hash
-    #                564e0fbdda308d4f83f0932e52d51eaf is generated. Model m1 give global optimal solution
-    #                and m2 is not able to find global optimum. But, this function will say that m2 is better
-    #                because of the rounding error described above. Following are the true solution of m1 and m2:
+    #       Example: For input file "Sample_input_cycle_parallel.xls" with SHA 256 hash
+    #                1974308a55bb73349c8d469ad733b2e6d007b5f8974dadc1dbff84f0e37d54f4,
+    #                the network file with SHA 256 hash 8a2153652abd8b40385c36763edaccc0a37f6729df101f84cd99515650c53053
+    #                is generated. Model m1 gives global optimal solution and m2 is not able to find global optimum.
+    #                Following are the true solution of m1 and m2:
     #                m1 = 14902767.473646978, m2 = 14902767.473647203
-    #                For checking whether the solver-model combination solved the input to global optimum
-    #                or not, the following condition seems enought:
-    #                    octsolJson['statistics']['dgo_exit_status'] == 'Solved_To_Global_Optimality'
-    #       Example: 420128.37368597434 from at49157.octsol for "octeract_m2_998a075a3545f6e8045a9c6538dbba2a"
-    #                becomes 4.201e+05
+    #                So, if an input file comes in which model m1 is not able to find the global optimum, but model m2
+    #                finds the global optimum; then this function will say that m1 is better because of the rounding
+    #                error described above.
+    #       Example: 420128.37368597416 becomes 4.201e+05
+    #                (
+    #                    Input file = Sample_input_cycle_twoloop (Source Elevation changed) (acyclic).xls
+    #                    Input file SHA 256 hash = 03c9e58a18ccbd814ae3e3cea278db5b5edca1d05a4a044e0b775ae08157b4f0
+    #                    Network file SHA 256 hash = 8af7e8c1cda61aecd09933f6e9a467a54f74f29f4e0efd2cbe40ebcc1239f4b0
+    #                    Solver = Octeract
+    #                    Model = m2
+    #                    From at80535.octsol
+    #                )
     #       Possible Solution: Print the variable `total_cost` using the `display` command of AMPL
+    #       Extra Info: For checking whether the solver-model combination solved the input to global optimum
+    #                   or not, the following condition seems enough:
+    #                       octsolJson['statistics']['dgo_exit_status'] == 'Solved_To_Global_Optimality'
     global g_settings
     all_results: List = list()  # Only used for debugging
     best_result_till_now, best_result_exec_info = float('inf'), None
@@ -1180,7 +1195,7 @@ def update_settings(args: argparse.Namespace):
         exit(2)
     g_settings.set_data_file_path(args.path)
     g_logger.debug(f"Graph/Network (i.e. Data/Testcase file) = '{g_settings.data_file_path}'")
-    g_logger.debug(f"Input file md5 = '{g_settings.data_file_md5_hash}'")
+    g_logger.debug(f"Input file hash = '{g_settings.data_file_hash}'")
 
     g_settings.set_execution_time_limit(seconds=args.time)
     g_logger.debug(f'Solver Execution Time Limit = {g_settings.r_execution_time_limit // 60 // 60:02}:'
