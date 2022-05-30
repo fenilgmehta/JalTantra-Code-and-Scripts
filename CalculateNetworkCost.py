@@ -1127,7 +1127,9 @@ def main():
     # Begin execution of next batch
     for i in range(min_combination_parallel_solvers, len(g_settings.solver_model_combinations)):
         g_logger.debug(run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}"', debug_print=True))
-        tmux_sessions_running = int(run_command_get_output(f'tmux ls 2> /dev/null | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
+        tmux_sessions_running = int(run_command_get_output(
+            f'tmux ls 2> /dev/null | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'
+        ))
         g_logger.debug(tmux_sessions_running)
 
         while tmux_sessions_running >= g_settings.r_max_parallel_solvers:
