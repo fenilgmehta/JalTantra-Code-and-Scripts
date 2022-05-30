@@ -20,7 +20,7 @@ Code and Scripts written for Jaltantra Project
         - To clean up the temporary file created by this program in the `/tmp` directory, execute the below commands
           ```shell
           # Make sure that the below GLOB does not match any other important file or
-          # directory created by some someone other than CalculateNetworkCost.py
+          # directory created by someone other than CalculateNetworkCost.py
           # And, do not perform this clean up when any instance of CalculateNetworkCost.py is running
           rm -r /tmp/pid_* /tmp/at*octsol /tmp/baron_tmp*
           ```
