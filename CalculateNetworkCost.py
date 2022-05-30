@@ -234,6 +234,26 @@ class SolverOutputAnalyzer:
     def baron_extract_best_solution(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, float]:
         """The processing done by this function depends on the output format of `extract_solution_baron(...)` method"""
         global g_logger
+
+        # Extract the solution from the std_out_err file using the value printed by the AMPL commands:
+        #     option display_precision 0;
+        #     display total_cost;
+        try:
+            file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
+            best_solution = re.search(r'^total_cost\s*=\s*(.*)$', file_txt, re.M).group(1)
+            best_solution = float(best_solution)
+            ok = True
+            if best_solution == 0 or best_solution > 1e40:
+                g_logger.warning(f"Probably an infeasible solution found by Baron: '{best_solution}'")
+                g_logger.info(f'Instance={exec_info}')
+                ok = False
+            return ok, best_solution
+        except Exception as e:
+            g_logger.error(f'CHECKME: {type(e)}, error:\n{e}')
+            g_logger.debug('Probably, Baron did not terminate immediately even after receiving the appropriate signal')
+
+        g_logger.info('Using fallback mechanism to extract the best solution')
+
         csv = SolverOutputAnalyzer.baron_extract_output_table(exec_info.uniq_std_out_err_file_path)
         if csv == '':
             return False, 0.0
@@ -343,6 +363,26 @@ class SolverOutputAnalyzer:
     def octeract_extract_best_solution(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, float]:
         """The processing done by this function depends on the output format of `extract_solution_octeract(...)` method"""
         global g_logger
+
+        # Extract the solution from the std_out_err file using the value printed by the AMPL commands:
+        #     option display_precision 0;
+        #     display total_cost;
+        try:
+            file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
+            best_solution = re.search(r'^total_cost\s*=\s*(.*)$', file_txt, re.M).group(1)
+            best_solution = float(best_solution)
+            ok = True
+            if best_solution == 0 or best_solution > 1e40:
+                g_logger.warning(f"Probably an infeasible solution found by Octeract: '{best_solution}'")
+                g_logger.info(f'Instance={exec_info}')
+                ok = False
+            return ok, best_solution
+        except Exception as e:
+            g_logger.error(f'CHECKME: {type(e)}, error:\n{e}')
+            g_logger.debug('Probably, Octeract did not terminate immediately '
+                           'even after receiving the appropriate signal')
+
+        g_logger.info('Using fallback mechanism to extract the best solution')
 
         # Custom checking for exceptional situations
         file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
@@ -793,6 +833,8 @@ echo $$ > "{info.uniq_pid_file_path}"
     option omit_zero_rows 1;
     display {(i,j) in arcs, k in pipes} l[i,j,k];
     display _total_solve_time;
+    option display_precision 0;
+    display total_cost;
 EOF
 echo > /dev/null
 '
