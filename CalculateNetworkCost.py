@@ -267,7 +267,7 @@ class SolverOutputAnalyzer:
             best_solution = float(lines[-1].split(',')[1])
         if best_solution > 1e40:
             g_logger.warning(f"Probably an infeasible solution found by Baron: '{lines[-1]}'")
-            g_logger.info(f'Instance={exec_info.__str__()}')
+            g_logger.info(f'Instance={exec_info}')
             ok = False
         return ok, best_solution
 
@@ -409,7 +409,7 @@ class SolverOutputAnalyzer:
 
         status = len(lines) > 0
         best_solution = 0.0
-        g_logger.info(f'Instance={exec_info.__str__()}')
+        g_logger.info(f'Instance={exec_info}')
         if len(lines) > 0:
             last_line_splitted = lines[-1].split(',')
             if len(last_line_splitted) > 2:
@@ -1045,7 +1045,7 @@ def main():
     for idx in reversed(tmux_monitor_list_idx_to_remove):
         tmux_finished_list.insert(0, tmux_monitor_list.pop(idx))
     del tmux_monitor_list_idx_to_remove
-    g_logger.debug(list(map(lambda x: x.__str__(), tmux_monitor_list)))
+    g_logger.debug(f'{tmux_monitor_list=}')
     if len(tmux_monitor_list) == 0:
         g_logger.warning('Failed to start all solver model sessions')
         # Sleep for some time so that AMPL and the solver can finish their termination properly, and write the
@@ -1206,7 +1206,7 @@ def main():
         best_cost_instance_exec_info.solver_name
     ].extract_solution_vector(best_cost_instance_exec_info)
     g_logger.info(f'{best_cost=}')
-    g_logger.info(f'Instance={best_cost_instance_exec_info.__str__()}')
+    g_logger.info(f'Instance={best_cost_instance_exec_info}')
     g_logger.info(f'Solver={best_cost_instance_exec_info.solver_name}, '
                   f'Model={best_cost_instance_exec_info.short_uniq_model_name}')
     run_command(f"echo '{status}' > '{g_settings.output_network_specific_result}'")
