@@ -992,6 +992,24 @@ def main():
         f"ln '{g_settings.data_file_path}' '{(pathlib.Path(g_settings.output_dir_level_1_network_specific) / '0_graph_network_data_testcase.R').resolve()}'"
     )
 
+    # Write metadata to "0_metadata" file
+    # REFER: https://www.geeksforgeeks.org/how-to-convert-python-dictionary-to-json/
+    g_logger.debug('START: Writing requests metadata to 0_metadata file')
+    current_time = datetime.datetime.now()  # REFER: https://www.geeksforgeeks.org/get-current-timestamp-using-python/
+    metadata_json_str = json.dumps(
+        dict(
+            unique_prefix=g_settings.TMUX_UNIQUE_PREFIX,
+            start_time=str(current_time),
+            start_timestamp=current_time.timestamp(),
+            solver_execution_time_limit_in_seconds=g_settings.r_execution_time_limit,
+            solver_cpu_cores=g_settings.r_cpu_cores_per_solver,
+        ),
+        indent=2
+    )
+    with open(f'{g_settings.output_dir_level_1_network_specific}/0_metadata', 'w') as metadata_file:
+        metadata_file.write(metadata_json_str)
+    g_logger.debug('FINISHED: Writing requests metadata to 0_metadata file')
+
     tmux_original_list: List[NetworkExecutionInformation] = list()
     tmux_monitor_list: List[NetworkExecutionInformation] = list()
     tmux_finished_list: List[NetworkExecutionInformation] = list()
