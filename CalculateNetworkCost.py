@@ -1283,6 +1283,7 @@ def update_settings(args: argparse.Namespace):
     if not os.path.exists(args.path):
         g_logger.error(f"Cannot access '{args.path}': No such file or directory")
         exit(2)
+    g_logger.info(f"Current working directory = '{os.getcwd()}'")
     g_settings.set_data_file_path(args.path)
     g_logger.info(f"Graph/Network (i.e. Data/Testcase file) = '{g_settings.data_file_path}'")
     g_logger.info(f"Input file hash = '{g_settings.data_file_hash}'")
