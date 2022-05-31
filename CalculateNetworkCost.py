@@ -941,33 +941,6 @@ def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) 
     Returns:
         ok, best solution, context of solver and model which found the best solution
     """
-    # TODO: Update this to extract best solution based on true objective function value and not approx value.
-    #       The current code works for almost all cases. However, I think there can be some corner case were
-    #       a slightly suboptimal solution "may get selected as the best solution" due to the rounding off (that
-    #       happens due to the Scientific Notation of numbers) that is done by the Solvers like Baron and
-    #       Octeract when printing the table which represents the state of the execution.
-    #       Example: For input file "Sample_input_cycle_parallel.xls" with SHA 256 hash
-    #                1974308a55bb73349c8d469ad733b2e6d007b5f8974dadc1dbff84f0e37d54f4,
-    #                the network file with SHA 256 hash 8a2153652abd8b40385c36763edaccc0a37f6729df101f84cd99515650c53053
-    #                is generated. Model m1 gives global optimal solution and m2 is not able to find global optimum.
-    #                Following are the true solution of m1 and m2:
-    #                m1 = 14902767.473646978, m2 = 14902767.473647203
-    #                So, if an input file comes in which model m1 is not able to find the global optimum, but model m2
-    #                finds the global optimum; then this function will say that m1 is better because of the rounding
-    #                error described above.
-    #       Example: 420128.37368597416 becomes 4.201e+05
-    #                (
-    #                    Input file = Sample_input_cycle_twoloop (Source Elevation changed) (acyclic).xls
-    #                    Input file SHA 256 hash = 03c9e58a18ccbd814ae3e3cea278db5b5edca1d05a4a044e0b775ae08157b4f0
-    #                    Network file SHA 256 hash = 8af7e8c1cda61aecd09933f6e9a467a54f74f29f4e0efd2cbe40ebcc1239f4b0
-    #                    Solver = Octeract
-    #                    Model = m2
-    #                    From at80535.octsol
-    #                )
-    #       Possible Solution: Print the variable `total_cost` using the `display` command of AMPL
-    #       Extra Info: For checking whether the solver-model combination solved the input to global optimum
-    #                   or not, the following condition seems enough:
-    #                       octsolJson['statistics']['dgo_exit_status'] == 'Solved_To_Global_Optimality'
     all_results: List = list()  # Only used for debugging
     best_result_till_now, best_result_exec_info = float('inf'), None
     for exec_info in tmux_monitor_list:
