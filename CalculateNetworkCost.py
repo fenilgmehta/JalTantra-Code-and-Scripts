@@ -1327,26 +1327,56 @@ def parser_check_solver_models(val: str) -> str:
 
 
 def parser_check_time_range(val: str) -> int:
+    """
+    Validate that `val` is of the format 'hh:mm:ss', and:
+        1. hh can be converted to an `int`
+        2. mm can be converted to an `int`
+        3. ss can be converted to an `int`
+        4. `0 <= hh`
+        5. `0 <= mm < 60`
+        6. `0 <= ss < 60`
+        7. (hh*60*60 + mm*60 + ss) >= 30
+
+    Args:
+        val: the value passed as commandline parameter
+
+    Returns:
+        `val` converted to seconds
+    """
     if val.count(':') != 2:
         raise argparse.ArgumentTypeError(f"invalid time value: '{val}', correct format is 'hh:mm:ss'")
     val_splitted = []
-    # Handle inputs like '::30'
+    # Handle inputs like '::30' --> ['0', '0', '30']
     for i in val.split(':'):
         val_splitted.append(i if len(i) > 0 else '0')
+    # Ensure that each element is an integer
     for i in val_splitted:
         if not i.isdigit():
             raise argparse.ArgumentTypeError(f"invalid int value: '{val}'")
+    # Check range of minutes
     if int(val_splitted[1]) >= 60:
         raise argparse.ArgumentTypeError(f"invalid minutes value: '{val}', 0 <= minutes < 60")
+    # Check range of seconds
     if int(val_splitted[2]) >= 60:
         raise argparse.ArgumentTypeError(f"invalid seconds value: '{val}', 0 <= seconds < 60")
+    # Convert 'hh:mm:ss' into seconds
     seconds = int(val_splitted[0]) * 60 * 60 + int(val_splitted[1]) * 60 + int(val_splitted[2])
+    # Ensure that seconds >= 30
     if seconds < 30:
         raise argparse.ArgumentTypeError('minimum `N` is 30')
     return seconds
 
 
 def parser_check_threads_int_range(c: str) -> int:
+    """
+    Validate that `c` can be converted to an `int`, and ensure that `int(c) >= 1`
+
+    Args:
+        c: the value passed as commandline parameter
+
+    Returns:
+        `c` converted to `int`
+    """
     if not c.isdigit():
         raise argparse.ArgumentTypeError(f"invalid int value: '{c}'")
     val = int(c)
@@ -1356,6 +1386,15 @@ def parser_check_threads_int_range(c: str) -> int:
 
 
 def parser_check_jobs_int_range(c: str) -> int:
+    """
+    Validate that `c` can be converted to an `int`, and ensure that `int(c) >= -1`
+
+    Args:
+        c: the value passed as commandline parameter
+
+    Returns:
+        `c` converted to `int`
+    """
     if not c.isdigit():
         raise argparse.ArgumentTypeError(f"invalid int value: '{c}'")
     val = int(c)
@@ -1365,6 +1404,9 @@ def parser_check_jobs_int_range(c: str) -> int:
 
 
 def check_requirements():
+    """
+    Check if the basic requirements for this code/program/script to properly execute are satisfied or not
+    """
     ok, res = run_command('which tmux')
     if not ok:
         print('`tmux` not installed')
