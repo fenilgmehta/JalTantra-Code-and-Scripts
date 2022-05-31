@@ -994,7 +994,7 @@ def main():
 
     # Write metadata to "0_metadata" file
     # REFER: https://www.geeksforgeeks.org/how-to-convert-python-dictionary-to-json/
-    g_logger.debug('START: Writing requests metadata to 0_metadata file')
+    g_logger.info('START: Writing requests metadata to 0_metadata file')
     current_time = datetime.datetime.now()  # REFER: https://www.geeksforgeeks.org/get-current-timestamp-using-python/
     metadata_json_str = json.dumps(
         dict(
@@ -1008,7 +1008,7 @@ def main():
     )
     with open(f'{g_settings.output_dir_level_1_network_specific}/0_metadata', 'w') as metadata_file:
         metadata_file.write(metadata_json_str)
-    g_logger.debug('FINISHED: Writing requests metadata to 0_metadata file')
+    g_logger.info('FINISHED: Writing requests metadata to 0_metadata file')
 
     tmux_original_list: List[NetworkExecutionInformation] = list()
     tmux_monitor_list: List[NetworkExecutionInformation] = list()
@@ -1035,6 +1035,7 @@ def main():
         g_logger.debug(f'{len(tmux_monitor_list)=}')
 
     # Error checking - Round 1
+    g_logger.info('START: Error checking - Round 1')
     tmux_monitor_list_idx_to_remove = list()
     for idx, exec_info in enumerate(tmux_monitor_list):
         if get_process_running_status(exec_info.tmux_bash_pid):
@@ -1045,12 +1046,14 @@ def main():
     for idx in reversed(tmux_monitor_list_idx_to_remove):
         tmux_finished_list.insert(0, tmux_monitor_list.pop(idx))
     del tmux_monitor_list_idx_to_remove
+    g_logger.info('FINISHED: Error checking - Round 1')
+    
     g_logger.debug(f'{tmux_monitor_list=}')
     if len(tmux_monitor_list) == 0:
         g_logger.warning('Failed to start all solver model sessions')
         # Sleep for some time so that AMPL and the solver can finish their termination properly, and write the
         # appropriate error messages to STDOUT (which are redirected to "Solver_m1_NetworkHash/std_out_err.txt")
-        g_logger.debug('Sleep for 20 seconds for AMPL and the solver to terminate properly')
+        g_logger.info('Sleep for 20 seconds for AMPL and the solver to terminate properly')
         time.sleep(20)
         run_command(f"echo 'launch_error' > {g_settings.output_dir_level_1_network_specific}/0_status")
         for exec_info in tmux_finished_list:
@@ -1095,31 +1098,33 @@ def main():
             delete_last_lines(2)
     if execution_time_left <= 5:
         time.sleep(execution_time_left)
-        g_logger.debug(f'Initial time limit over '
-                       f'(i.e. {str(datetime.timedelta(seconds=g_settings.r_execution_time_limit))})')
+        g_logger.info(f'Initial time limit over '
+                      f'(i.e. {str(datetime.timedelta(seconds=g_settings.r_execution_time_limit))})')
         g_logger.debug("Tmux session count = " +
                        run_command_get_output(f'tmux ls 2> /dev/null | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
     else:
-        g_logger.debug('while loop forcefully stopped using `break` as no `tmux` session were running')
+        g_logger.info('while loop forcefully stopped using `break` as no `tmux` session were running')
     del execution_time_left
 
     # Error checking - Round 2
+    g_logger.info('START: Error checking - Round 2')
     for exec_info in tmux_original_list:
         ok, err_msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
         if not ok:
             g_logger.warning(str(exec_info))
             g_logger.error(err_msg)
+    g_logger.info('FINISHED: Error checking - Round 2')
 
     at_least_one_solution_found = False
     extra_time_given = 0
     while len(tmux_monitor_list) > 0 and (not check_solution_status(tmux_monitor_list)):
         extra_time_given += 30
-        g_logger.debug(f'Extra time given = {extra_time_given} of 300 seconds')
+        g_logger.info(f'Extra time given = {extra_time_given} of 300 seconds')
         time.sleep(30)  # Give 30 more seconds to the running solvers
         # TODO: NOTE: In future, this too can be taken as a command line parameter
         # Maximum 5 minutes extra time is given
         if extra_time_given >= 300:
-            g_logger.debug('"Extra time" limit reached')
+            g_logger.info('"Extra time" limit reached')
             break
     del extra_time_given
     at_least_one_solution_found = True
@@ -1156,21 +1161,26 @@ def main():
         g_logger.debug(f'{len(tmux_finished_list)=}')
 
     # Error checking - Round 3 (last round)
-    g_logger.debug('Error checking - Round 3 (last round)')
+    g_logger.info('START: Error checking - Round 3 (last round)')
     for exec_info in tmux_original_list:
         ok, err_msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
         if not ok:
             g_logger.warning(str(exec_info))
             g_logger.error(err_msg)
+    g_logger.info('FINISHED: Error checking - Round 3 (last round)')
 
     # NOTE: We will not copy files with glob `/tmp/at*nl` because they
     #       are only used to pass information from AMPL to solver
+    g_logger.info('START: Copying solution files from /tmp to `g_settings.OUTPUT_DIR_LEVEL_1_DATA`')
     run_command_get_output(f"cp -r /tmp/at*octsol /tmp/baron_tmp* '{g_settings.OUTPUT_DIR_LEVEL_1_DATA}'")
+    g_logger.info('FINISHED: Copying solution files from /tmp to `g_settings.OUTPUT_DIR_LEVEL_1_DATA`')
 
+    g_logger.info('START: Extracting best solution among all solver-model instances')
     g_logger.debug(f'{len(tmux_monitor_list)=}')
     g_logger.debug(f'{len(tmux_finished_list)=}')
     status, best_cost, best_cost_instance_exec_info = extract_best_solution(tmux_original_list)
     g_logger.debug((status, best_cost, str(best_cost_instance_exec_info)))
+    g_logger.info('FINISHED: Extracting best solution among all solver-model instances')
 
     # Do not overwrite the result file of previous execution
     # Just rename the result file of previous execution
@@ -1186,6 +1196,7 @@ def main():
                       f" -> '{os.path.split(new_path)[1]}'")
         del path_prefix, path_suffix, new_path
 
+    g_logger.info('START: Writing the best solution found to result file')
     if not status:
         g_logger.error('NO feasible solution found')
         run_command(f"echo '{status}' > '{g_settings.output_network_specific_result}'")
@@ -1199,6 +1210,7 @@ def main():
             run_command(f"echo '\n---+++---\n\n{exec_info.solver_name}, {exec_info.short_uniq_model_name}'"
                         f" >> {g_settings.output_dir_level_1_network_specific}/0_status")
             run_command(f"echo '\n{msg}' >> {g_settings.output_dir_level_1_network_specific}/0_status")
+        g_logger.info('FINISHED: Writing the best solution found to result file')
         return
 
     run_command(f"echo 'success' > {g_settings.output_dir_level_1_network_specific}/0_status")
@@ -1219,6 +1231,7 @@ def main():
     run_command(f"echo '{file_to_parse}' >> '{g_settings.output_network_specific_result}'")
     run_command(f"echo '{objective_value}' >> '{g_settings.output_network_specific_result}'")
     run_command(f"echo '{solution_vector}' >> '{g_settings.output_network_specific_result}'")
+    g_logger.info('FINISHED: Writing the best solution found to result file')
     pass
 
 
@@ -1256,13 +1269,13 @@ def update_settings(args: argparse.Namespace):
         g_logger.error(f"Cannot access '{args.path}': No such file or directory")
         exit(2)
     g_settings.set_data_file_path(args.path)
-    g_logger.debug(f"Graph/Network (i.e. Data/Testcase file) = '{g_settings.data_file_path}'")
-    g_logger.debug(f"Input file hash = '{g_settings.data_file_hash}'")
+    g_logger.info(f"Graph/Network (i.e. Data/Testcase file) = '{g_settings.data_file_path}'")
+    g_logger.info(f"Input file hash = '{g_settings.data_file_hash}'")
 
     g_settings.set_execution_time_limit(seconds=args.time)
-    g_logger.debug(f'Solver Execution Time Limit = {g_settings.r_execution_time_limit // 60 // 60:02}:'
-                   f'{(g_settings.r_execution_time_limit // 60) % 60:02}:'
-                   f'{g_settings.r_execution_time_limit % 60:02}')
+    g_logger.info(f'Solver Execution Time Limit = {g_settings.r_execution_time_limit // 60 // 60:02}:'
+                  f'{(g_settings.r_execution_time_limit // 60) % 60:02}:'
+                  f'{g_settings.r_execution_time_limit % 60:02}')
 
     for solver_model_numbers_list in args.solver_models:
         for solver_model_numbers in solver_model_numbers_list:
@@ -1272,10 +1285,10 @@ def update_settings(args: argparse.Namespace):
                 g_settings.solver_model_combinations.append((
                     solver_name, AutoExecutorSettings.AVAILABLE_MODELS[int(i)]
                 ))
-    g_logger.debug(f'Solver Model Combinations = {g_settings.solver_model_combinations}')
+    g_logger.info(f'Solver Model Combinations = {g_settings.solver_model_combinations}')
 
     g_settings.set_cpu_cores_per_solver(args.threads_per_solver_instance)
-    g_logger.debug(f'r_cpu_cores_per_solver = {g_settings.r_cpu_cores_per_solver}')
+    g_logger.info(f'r_cpu_cores_per_solver = {g_settings.r_cpu_cores_per_solver}')
 
     if args.jobs == 0:
         g_settings.r_max_parallel_solvers = len(g_settings.solver_model_combinations)
@@ -1283,7 +1296,7 @@ def update_settings(args: argparse.Namespace):
         g_settings.r_max_parallel_solvers = run_command_get_output('nproc')
     else:
         g_settings.r_max_parallel_solvers = args.jobs
-    g_logger.debug(f'r_max_parallel_solvers = {g_settings.r_max_parallel_solvers}')
+    g_logger.info(f'r_max_parallel_solvers = {g_settings.r_max_parallel_solvers}')
     if g_settings.r_max_parallel_solvers < len(g_settings.solver_model_combinations):
         # TODO: Add more clear warning message explaining the technique used to get the results
         #       Result = Return the best result found in `EXECUTION_TIME_LIMIT` time among all solver model combinations.
