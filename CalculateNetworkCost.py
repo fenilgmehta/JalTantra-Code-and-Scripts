@@ -1008,6 +1008,7 @@ def main():
     )
     with open(f'{g_settings.output_dir_level_1_network_specific}/0_metadata', 'w') as metadata_file:
         metadata_file.write(metadata_json_str)
+    del current_time, metadata_json_str, metadata_file
     g_logger.info('FINISHED: Writing requests metadata to 0_metadata file')
 
     tmux_original_list: List[NetworkExecutionInformation] = list()
@@ -1033,6 +1034,7 @@ def main():
         g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
         time.sleep(0.2)
         g_logger.debug(f'{len(tmux_monitor_list)=}')
+    del i, exec_info
 
     # Error checking - Round 1
     g_logger.info('START: Error checking - Round 1')
@@ -1045,9 +1047,9 @@ def main():
         tmux_monitor_list_idx_to_remove.append(idx)
     for idx in reversed(tmux_monitor_list_idx_to_remove):
         tmux_finished_list.insert(0, tmux_monitor_list.pop(idx))
-    del tmux_monitor_list_idx_to_remove
+    del tmux_monitor_list_idx_to_remove, idx, exec_info
     g_logger.info('FINISHED: Error checking - Round 1')
-    
+
     g_logger.debug(f'{tmux_monitor_list=}')
     if len(tmux_monitor_list) == 0:
         g_logger.warning('Failed to start all solver model sessions')
@@ -1113,8 +1115,10 @@ def main():
         if not ok:
             g_logger.warning(str(exec_info))
             g_logger.error(err_msg)
+    del exec_info, ok, err_msg
     g_logger.info('FINISHED: Error checking - Round 2')
 
+    # NOTE: `at_least_one_solution_found` variable is unused as of now. However, it may be needed in future.
     at_least_one_solution_found = False
     extra_time_given = 0
     while len(tmux_monitor_list) > 0 and (not check_solution_status(tmux_monitor_list)):
@@ -1128,6 +1132,7 @@ def main():
             break
     del extra_time_given
     at_least_one_solution_found = True
+    del at_least_one_solution_found
 
     # Begin execution of next batch
     for i in range(min_combination_parallel_solvers, len(g_settings.solver_model_combinations)):
@@ -1150,6 +1155,7 @@ def main():
         tmux_monitor_list.append(exec_info)
         g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
         time.sleep(0.2)
+        del tmux_sessions_running, exec_info
 
     # NOTE: The below loop is required to move finished tmux session from monitor list to finished list
     while len(tmux_monitor_list):
@@ -1167,6 +1173,7 @@ def main():
         if not ok:
             g_logger.warning(str(exec_info))
             g_logger.error(err_msg)
+    del exec_info, ok, err_msg
     g_logger.info('FINISHED: Error checking - Round 3 (last round)')
 
     # NOTE: We will not copy files with glob `/tmp/at*nl` because they
@@ -1194,7 +1201,7 @@ def main():
         os.rename(src=g_settings.output_network_specific_result, dst=new_path)
         g_logger.info(f"Old Solution Renamed from '{os.path.split(g_settings.output_network_specific_result)[1]}'"
                       f" -> '{os.path.split(new_path)[1]}'")
-        del path_prefix, path_suffix, new_path
+        del path_prefix, path_suffix, new_path, i
 
     g_logger.info('START: Writing the best solution found to result file')
     if not status:
@@ -1210,6 +1217,7 @@ def main():
             run_command(f"echo '\n---+++---\n\n{exec_info.solver_name}, {exec_info.short_uniq_model_name}'"
                         f" >> {g_settings.output_dir_level_1_network_specific}/0_status")
             run_command(f"echo '\n{msg}' >> {g_settings.output_dir_level_1_network_specific}/0_status")
+        del exec_info, ok, msg
         g_logger.info('FINISHED: Writing the best solution found to result file')
         return
 
