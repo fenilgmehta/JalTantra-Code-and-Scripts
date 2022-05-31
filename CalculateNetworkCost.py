@@ -1021,6 +1021,7 @@ def main():
     )
 
     # Begin execution of first batch
+    g_logger.info('START: Execution of first batch of solvers')
     run_command(f"echo 'running' > {g_settings.output_dir_level_1_network_specific}/0_status")
     for i in range(min_combination_parallel_solvers):
         exec_info = g_settings.start_solver(i)
@@ -1035,6 +1036,7 @@ def main():
         time.sleep(0.2)
         g_logger.debug(f'{len(tmux_monitor_list)=}')
     del i, exec_info
+    g_logger.info('FINISHED: Execution of first batch of solvers')
 
     # Error checking - Round 1
     g_logger.info('START: Error checking - Round 1')
@@ -1135,6 +1137,7 @@ def main():
     del at_least_one_solution_found
 
     # Begin execution of next batch
+    g_logger.info('START: Execution of final batch of solvers')
     for i in range(min_combination_parallel_solvers, len(g_settings.solver_model_combinations)):
         g_logger.debug(run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}"', debug_print=True))
         tmux_sessions_running = int(run_command_get_output(
@@ -1156,6 +1159,7 @@ def main():
         g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
         time.sleep(0.2)
         del tmux_sessions_running, exec_info
+    g_logger.info('FINISHED: Execution of final batch of solvers')
 
     # NOTE: The below loop is required to move finished tmux session from monitor list to finished list
     while len(tmux_monitor_list):
@@ -1194,7 +1198,7 @@ def main():
     if os.path.exists(g_settings.output_network_specific_result):
         path_prefix, path_suffix = os.path.splitext(g_settings.output_network_specific_result)
         new_path = None
-        for i in range(1, 10000000):
+        for i in range(1, 10_000_000):
             new_path = f'{path_prefix}_{i:07}{path_suffix}'
             if not os.path.exists(new_path):
                 break
@@ -1240,7 +1244,7 @@ def main():
     run_command(f"echo '{objective_value}' >> '{g_settings.output_network_specific_result}'")
     run_command(f"echo '{solution_vector}' >> '{g_settings.output_network_specific_result}'")
     g_logger.info('FINISHED: Writing the best solution found to result file')
-    pass
+    return
 
 
 def update_settings(args: argparse.Namespace):
