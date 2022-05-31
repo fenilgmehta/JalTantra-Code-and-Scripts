@@ -926,7 +926,6 @@ class MonitorAndStopper:
 
 
 def check_solution_status(tmux_monitor_list: List[NetworkExecutionInformation]) -> bool:
-    # https://stackoverflow.com/questions/878943/why-return-notimplemented-instead-of-raising-notimplementederror
     for info in tmux_monitor_list:
         if g_settings.solvers[info.solver_name].check_solution_found(info):
             return True
