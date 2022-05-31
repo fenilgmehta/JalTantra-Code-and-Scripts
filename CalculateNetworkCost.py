@@ -486,7 +486,7 @@ class SolverOutputAnalyzer:
         # AMPL demo licence limitation
         err_idx = None
         try:
-            err_idx = file_txt.index('Sorry, a demo license for AMPL is limited to 300 variables')
+            err_idx = file_txt.index('Sorry, a demo license for AMPL is limited to')
             err_msg = file_txt[err_idx:file_txt.index('ampl:', err_idx)].replace('\n', ' ').strip()
             g_logger.debug(err_msg)
             return False, err_msg
