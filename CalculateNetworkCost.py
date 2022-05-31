@@ -1081,7 +1081,7 @@ def main():
                        f'{str(datetime.timedelta(seconds=g_settings.r_execution_time_limit - execution_time_left))}'
                        f', Time Left = {str(datetime.timedelta(seconds=execution_time_left))}')
         g_logger.debug("Tmux session count = " +
-                       run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
+                       run_command_get_output(f'tmux ls 2> /dev/null | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
         if run_command(f'tmux ls 2> /dev/null | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l', '0')[1] == '0':
             g_logger.info(f'{execution_time_left=}')
             g_logger.info('CHECKME: Skipping the sleep/wait operation as no tmux session is '
@@ -1098,7 +1098,7 @@ def main():
         g_logger.debug(f'Initial time limit over '
                        f'(i.e. {str(datetime.timedelta(seconds=g_settings.r_execution_time_limit))})')
         g_logger.debug("Tmux session count = " +
-                       run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
+                       run_command_get_output(f'tmux ls 2> /dev/null | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
     else:
         g_logger.debug('while loop forcefully stopped using `break` as no `tmux` session were running')
     del execution_time_left
