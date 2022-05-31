@@ -196,6 +196,75 @@ class SolverOutputAnalyzer:
     Perform output analysis (i.e. extract solution, error messages and other necessary information) for various solvers
     """
 
+    @staticmethod
+    def ampl_check_errors(file_txt: str) -> Tuple[bool, str]:
+        # AMPL binary does not exist
+        try:
+            err_idx = file_txt.index('no such file or directory: ./ampl.linux-intel64/ampl')
+            err_msg = file_txt.strip()
+            g_logger.debug(err_msg)
+            return False, err_msg
+        except ValueError:
+            pass  # substring not found
+
+        # Execute permission not available for AMPL
+        try:
+            err_idx = file_txt.index('permission denied: ./ampl.linux-intel64/ampl')
+            err_msg = file_txt.strip()
+            g_logger.debug(err_msg)
+            return False, err_msg
+        except ValueError:
+            pass  # substring not found
+
+        # Execute permission not available for Solver
+        try:
+            if 'Cannot invoke' in file_txt and 'Permission denied' in file_txt:
+                err_idx = file_txt.index('Permission denied')
+                err_msg = file_txt[:err_idx + len('Permission denied') + 1].strip()
+                g_logger.debug(err_msg)
+                return False, err_msg
+        except Exception as e:
+            g_logger.error(f'FIXME: {type(e)}:\n{e}')
+
+        # AMPL demo licence limitation
+        err_idx = None
+        try:
+            err_idx = file_txt.index('Sorry, a demo license for AMPL is limited to')
+            err_msg = file_txt[err_idx:file_txt.index('ampl:', err_idx)].replace('\n', ' ').strip()
+            g_logger.debug(err_msg)
+            return False, err_msg
+        except ValueError:
+            if err_idx is not None:
+                g_logger.debug(file_txt[err_idx:])
+                return False, file_txt[err_idx:]
+            pass  # substring not found
+
+        # Probable explanation: some error occurred before the presolve phase
+        err_idx = None
+        try:
+            err_idx = file_txt.index('Error executing "solve" command:')
+            err_msg = file_txt[err_idx:file_txt.index('<BREAK>', err_idx)].replace('\n', ' ').strip()
+            g_logger.debug(err_msg)
+            return False, err_msg
+        except ValueError:
+            if err_idx is not None:
+                g_logger.debug(file_txt[err_idx:])
+                return False, file_txt[err_idx:]
+            pass  # substring not found
+        del err_idx
+
+        # Solver did not proceed due to some impossible situations, e.g. X should be <= 3 and >= 7
+        try:
+            if '_total_solve_time = 0' in file_txt:
+                err_idx = file_txt.index('presolve:')
+                err_msg = file_txt[err_idx: file_txt.index('_total_solve_time')]
+                g_logger.debug(err_msg)
+                return False, err_msg
+        except ValueError:
+            pass  # substring not found
+
+        return True, 'No Errors'
+
     # NOTE: Baron Functions below
 
     """
@@ -282,13 +351,11 @@ class SolverOutputAnalyzer:
     def baron_check_errors(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
         global g_logger
         file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
-        try:
-            err_idx = file_txt.index('permission denied: ./ampl.linux-intel64/ampl')
-            err_msg = file_txt.strip()
-            g_logger.debug(err_msg)
-            return False, err_msg
-        except ValueError:
-            pass  # substring not found
+
+        ok, err_msg = SolverOutputAnalyzer.ampl_check_errors(file_txt)
+        if not ok:
+            return ok, err_msg
+
         try:
             err_idx = file_txt.index('Sorry, a demo license is limited to 10 variables')
             err_msg = file_txt[err_idx:file_txt.index('exit value 1', err_idx)].replace('\n', ' ').strip()
@@ -296,6 +363,7 @@ class SolverOutputAnalyzer:
             return False, err_msg
         except ValueError:
             pass  # substring not found
+
         try:
             err_idx = re.search(r'''Can't\s+find\s+file\s+['"]?.+['"]?''', file_txt).start()
             g_logger.debug(file_txt[err_idx:])
@@ -306,8 +374,10 @@ class SolverOutputAnalyzer:
             g_logger.debug(f'{exec_info.uniq_std_out_err_file_path=}')
         except Exception as e:
             g_logger.error(f'FIXME: {type(e)}:\n{e}')
+
         if 'No feasible solution was found' in file_txt:
             return False, 'No feasible solution was found'
+
         return True, 'No Errors'
 
     @staticmethod
@@ -441,24 +511,9 @@ class SolverOutputAnalyzer:
         if 'Iteration            GAP               LLB          BUB            Pool       Time       Mem' in file_txt:
             return True, 'Probably No Errors'
 
-        # Execute permission not available for AMPL
-        try:
-            err_idx = file_txt.index('permission denied: ./ampl.linux-intel64/ampl')
-            err_msg = file_txt.strip()
-            g_logger.debug(err_msg)
-            return False, err_msg
-        except ValueError:
-            pass  # substring not found
-
-        # Execute permission not available for Solver
-        try:
-            if 'Cannot invoke' in file_txt and 'Permission denied' in file_txt:
-                err_idx = file_txt.index('Permission denied')
-                err_msg = file_txt[:err_idx + len('Permission denied') + 1].strip()
-                g_logger.debug(err_msg)
-                return False, err_msg
-        except Exception as e:
-            g_logger.error(f'FIXME: {type(e)}:\n{e}')
+        ok, err_msg = SolverOutputAnalyzer.ampl_check_errors(file_txt)
+        if not ok:
+            return ok, err_msg
 
         try:
             err_idx = re.search(r'''Can't\s+find\s+file\s+['"]?.+['"]?''', file_txt).start()
@@ -486,19 +541,6 @@ class SolverOutputAnalyzer:
                 return False, file_txt[err_idx:]
             pass  # substring not found
 
-        # AMPL demo licence limitation
-        err_idx = None
-        try:
-            err_idx = file_txt.index('Sorry, a demo license for AMPL is limited to')
-            err_msg = file_txt[err_idx:file_txt.index('ampl:', err_idx)].replace('\n', ' ').strip()
-            g_logger.debug(err_msg)
-            return False, err_msg
-        except ValueError:
-            if err_idx is not None:
-                g_logger.debug(file_txt[err_idx:])
-                return False, file_txt[err_idx:]
-            pass  # substring not found
-
         # Octeract solver failed to establish connection to their server. Hence, it does not proceed
         # with the solving.
         err_idx = None
@@ -511,18 +553,6 @@ class SolverOutputAnalyzer:
                 return False, err_msg
             else:
                 g_logger.debug(f'CHECKME: {file_txt[err_idx:]=}')
-        except ValueError:
-            if err_idx is not None:
-                g_logger.debug(file_txt[err_idx:])
-                return False, file_txt[err_idx:]
-            pass  # substring not found
-
-        err_idx = None
-        try:
-            err_idx = file_txt.index('Error executing "solve" command:')
-            err_msg = file_txt[err_idx:file_txt.index('<BREAK>', err_idx)].replace('\n', ' ').strip()
-            g_logger.debug(err_msg)
-            return False, err_msg
         except ValueError:
             if err_idx is not None:
                 g_logger.debug(file_txt[err_idx:])
@@ -545,16 +575,6 @@ class SolverOutputAnalyzer:
             if 'all variables eliminated, but lower bound' in file_txt:
                 err_idx = file_txt.index('_total_solve_time')
                 err_msg = file_txt[:err_idx]
-                g_logger.debug(err_msg)
-                return False, err_msg
-        except ValueError:
-            pass  # substring not found
-
-        # Solver did not proceed due to some impossible situations, e.g. X should be <= 3 and >= 7
-        try:
-            if '_total_solve_time = 0' in file_txt:
-                err_idx = file_txt.index('presolve:')
-                err_msg = file_txt[err_idx: file_txt.index('_total_solve_time')]
                 g_logger.debug(err_msg)
                 return False, err_msg
         except ValueError:
