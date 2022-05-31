@@ -172,6 +172,9 @@ def file_hash_sha256(file_path) -> str:
         chunk = f.read(8192)
         total_progress = min(len(chunk), total_bytes)
         last_progress_printed = -1
+        if g_STD_OUT_ERR_TO_TERMINAL:
+            g_logger.info('--- blank link to handle first use of `delete_last_lines()` '
+                          'that happens before first progress logging ---')
         while chunk:
             file_hash.update(chunk)
             new_progress = (100 * total_progress) // total_bytes
