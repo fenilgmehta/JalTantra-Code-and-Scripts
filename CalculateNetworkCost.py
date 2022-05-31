@@ -1209,6 +1209,10 @@ def main():
     run_command_get_output(f"cp -r /tmp/at*octsol /tmp/baron_tmp* '{g_settings.OUTPUT_DIR_LEVEL_1_DATA}'")
     g_logger.info('FINISHED: Copying solution files from /tmp to `g_settings.OUTPUT_DIR_LEVEL_1_DATA`')
 
+    while run_command(f'tmux ls 2> /dev/null | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l', '0', True)[1] != '0':
+        g_logger.info('WAITING for the tmux instances to stop (probably AMPL or some solver has not terminated)')
+        time.sleep(10)
+
     g_logger.info('START: Extracting best solution among all solver-model instances')
     g_logger.debug(f'{len(tmux_monitor_list)=}')
     g_logger.debug(f'{len(tmux_finished_list)=}')
