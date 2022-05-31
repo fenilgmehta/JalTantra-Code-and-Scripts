@@ -67,7 +67,6 @@ def run_command(cmd: str, default_result: str = '', debug_print: bool = False) -
         Tuple of [ok, output]
     """
     # REFER: Context-Search-fms
-    global g_logger, g_BASH_PATH
     if debug_print:
         g_logger.debug(f'COMMAND:\n`{cmd}`')
     try:
@@ -165,7 +164,6 @@ def file_hash_sha256(file_path) -> str:
     This is same as `shasum -a 256 FilePath`. REFER: https://en.wikipedia.org/wiki/Secure_Hash_Algorithms
     """
     # REFER: https://stackoverflow.com/questions/16874598/how-do-i-calculate-the-md5-checksum-of-a-file-in-python
-    global g_logger, g_STD_OUT_ERR_TO_TERMINAL
     total_bytes = os.path.getsize(file_path)
     with open(file_path, "rb") as f:
         file_hash = hashlib.sha256()
@@ -305,8 +303,6 @@ class SolverOutputAnalyzer:
     @staticmethod
     def baron_extract_best_solution(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, float]:
         """The processing done by this function depends on the output format of `extract_solution_baron(...)` method"""
-        global g_logger
-
         # Extract the solution from the std_out_err file using the value printed by the AMPL commands:
         #     option display_precision 0;
         #     display total_cost;
@@ -349,7 +345,6 @@ class SolverOutputAnalyzer:
 
     @staticmethod
     def baron_check_errors(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
-        global g_logger
         file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
 
         ok, err_msg = SolverOutputAnalyzer.ampl_check_errors(file_txt)
@@ -435,8 +430,6 @@ class SolverOutputAnalyzer:
     @staticmethod
     def octeract_extract_best_solution(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, float]:
         """The processing done by this function depends on the output format of `extract_solution_octeract(...)` method"""
-        global g_logger
-
         # Extract the solution from the std_out_err file using the value printed by the AMPL commands:
         #     option display_precision 0;
         #     display total_cost;
@@ -503,7 +496,6 @@ class SolverOutputAnalyzer:
 
     @staticmethod
     def octeract_check_errors(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
-        global g_logger
         file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
 
         if 'Found solution during preprocessing' in file_txt:
@@ -612,8 +604,6 @@ class NetworkExecutionInformation:
         """
         This constructor will set all data members except `self.tmux_bash_pid`
         """
-        global g_logger
-
         self.tmux_bash_pid: Union[str, None] = None  # This has to be set manually
         self.idx: int = idx
         self.aes: 'AutoExecutorSettings' = aes
@@ -686,7 +676,6 @@ class SolverInformation:
         Returns:
              A boolean value telling whether the solver found any feasible solution or not
         """
-        global g_logger
         if self.fn_check_solution_found is None:
             g_logger.error(f"`self.fn_check_solution_found` is `None` for self.engine_path='{self.engine_path}'")
             return True
@@ -705,7 +694,6 @@ class SolverInformation:
              A boolean value telling whether the solver found any feasible solution or not
              A float value which is the optimal solution found till that moment
         """
-        global g_logger
         if self.fn_extract_best_solution is None:
             g_logger.error(f"`self.fn_check_solution_found` is `None` for self.engine_path='{self.engine_path}'")
             return True, 0.0
@@ -713,14 +701,12 @@ class SolverInformation:
 
     def check_errors(self, exec_info: NetworkExecutionInformation) -> Tuple[bool, str]:
         """By default, it is assumed that everything is ok (i.e. error free)"""
-        global g_logger
         if self.fn_check_errors is None:
             g_logger.error(f"`self.fn_check_errors` is `None` for self.engine_path='{self.engine_path}'")
             return True, '?'
         return self.fn_check_errors(exec_info)
 
     def extract_solution_vector(self, exec_info: NetworkExecutionInformation) -> Tuple[bool, str, float, str]:
-        global g_logger
         if self.fn_extract_solution_vector is None:
             g_logger.error(f"`self.fn_extract_solution_vector` is `None` for self.engine_path='{self.engine_path}'")
             return False, '?', float('nan'), '?'
@@ -940,7 +926,6 @@ class MonitorAndStopper:
 
 
 def check_solution_status(tmux_monitor_list: List[NetworkExecutionInformation]) -> bool:
-    global g_settings
     # https://stackoverflow.com/questions/878943/why-return-notimplemented-instead-of-raising-notimplementederror
     for info in tmux_monitor_list:
         if g_settings.solvers[info.solver_name].check_solution_found(info):
@@ -984,7 +969,6 @@ def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) 
     #       Extra Info: For checking whether the solver-model combination solved the input to global optimum
     #                   or not, the following condition seems enough:
     #                       octsolJson['statistics']['dgo_exit_status'] == 'Solved_To_Global_Optimality'
-    global g_settings
     all_results: List = list()  # Only used for debugging
     best_result_till_now, best_result_exec_info = float('inf'), None
     for exec_info in tmux_monitor_list:
@@ -1005,7 +989,6 @@ def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) 
 
 
 def main():
-    global g_logger, g_settings, g_STD_OUT_ERR_TO_TERMINAL
     run_command_get_output(f'mkdir -p "{g_settings.OUTPUT_DIR_LEVEL_0}"')
     run_command_get_output(f'mkdir -p "{g_settings.OUTPUT_DIR_LEVEL_1_DATA}"')
     run_command_get_output(f'mkdir -p "{g_settings.output_dir_level_1_network_specific}"')
@@ -1275,7 +1258,7 @@ def main():
 
 
 def update_settings(args: argparse.Namespace):
-    global g_logger, g_settings
+    global g_logger
 
     g_settings.debug = args.debug
 
