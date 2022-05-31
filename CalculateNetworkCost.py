@@ -1326,15 +1326,18 @@ def parser_check_solver_models(val: str) -> str:
     if len(val_splitted) == 1:
         if val_splitted[0] in AutoExecutorSettings.AVAILABLE_SOLVERS:
             raise argparse.ArgumentTypeError(f"no model numbers given")
-        raise argparse.ArgumentTypeError(f"invalid solver name")
+        raise argparse.ArgumentTypeError(f"invalid solver name, "
+                                         f"valid solvers = {AutoExecutorSettings.AVAILABLE_SOLVERS}")
     if val_splitted[0] not in AutoExecutorSettings.AVAILABLE_SOLVERS:
-        raise argparse.ArgumentTypeError(f"invalid solver name")
+        raise argparse.ArgumentTypeError(f"invalid solver name, "
+                                         f"valid solvers = {AutoExecutorSettings.AVAILABLE_SOLVERS}")
     for i in val_splitted[1:]:
         if not i.isdigit():
-            raise argparse.ArgumentTypeError(f"model number should be int")
+            raise argparse.ArgumentTypeError(f"model number should be int ('{i}' is not an int), valid model numbers = "
+                                             f"{list(AutoExecutorSettings.AVAILABLE_MODELS.keys())}")
         if int(i) not in AutoExecutorSettings.AVAILABLE_MODELS.keys():
-            raise argparse.ArgumentTypeError(f"invalid model number value: '{i}', "
-                                             f"valid values = {list(AutoExecutorSettings.AVAILABLE_MODELS.keys())}")
+            raise argparse.ArgumentTypeError(f"invalid model number value: '{i}', valid model numbers = "
+                                             f"{list(AutoExecutorSettings.AVAILABLE_MODELS.keys())}")
     return val
 
 
