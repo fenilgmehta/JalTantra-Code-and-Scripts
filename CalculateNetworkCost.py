@@ -878,10 +878,6 @@ class MonitorAndStopper:
         if execution_time_limit <= 0.0:
             g_logger.error(f'FIXME: `execution_time_limit` is not greater than 0')
             return
-        # NOTE: It is the below TODO item which resulted in lots of changes
-        #       to the code and in turn improving the program structure :)
-        # TODO: Dynamically find the value of `process_name_to_stop_using_ctrl_c` based on solver name and PID.
-        #       May have to update the `pids_to_monitor` list to store solver name along with the PID.
 
         # Index of elements of `tmux_monitor_list` which were/have stopped.
         tmux_finished_list_idx: List[int] = list()
@@ -1055,6 +1051,7 @@ def main():
     #            the solver is unable to find any feasible solution even after executing for hours
     #       Solution 1: Add a flag to impose hard deadline on execution time, i.e. the execution of a solver is
     #                   to be stopped if no solution is found by it within the specified hard deadline timelimit
+    #       NOTE: Partially fixed in commit ef1901faa5b9b6d8411df0f8625791a38c851527
     # TODO: Problem: See if we can optimise the execution in the below situation:
     #         1. `g_settings.solver_model_combinations > g_settings.MAX_PARALLEL_SOLVERS`
     #         2. Some error occur in the execution of a one of
