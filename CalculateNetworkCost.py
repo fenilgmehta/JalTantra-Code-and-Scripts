@@ -1129,9 +1129,12 @@ def main() -> None:
         if extra_time_given >= 300:
             g_logger.info('"Extra time" limit reached')
             break
-    del extra_time_given
-    at_least_one_solution_found = True
-    del at_least_one_solution_found
+    # NOTE: The below statement will work in most cases. However, there can be corner cases where a solution
+    #       is found by one of the session of first batch but still `at_least_one_solution_found` is False.
+    #       This case can occur when a solver finds the solution at the time between "checking of solution status
+    #       in the above loop" and "stopping of that session in the below `for` loop of second batch"
+    at_least_one_solution_found = (extra_time_given < 300)
+    del extra_time_given, at_least_one_solution_found
 
     # Begin execution of the remaining solver-model combinations
     g_logger.info('START: Execution of the remaining solver-model combinations')
