@@ -38,7 +38,7 @@ g_logger = logging.getLogger('CNC')
 #   1. Linux OS is used for execution
 #   2. `bash`, `which`, `nproc`, `tmux` are installed
 #   3. Python lib `rich` is installed
-#   4. AMPL, Baron, Octeract are installed and properly configure
+#   4. AMPL, Baron, Octeract are installed and properly configured
 #      (Execution is done from "mtp" directory or any other directory with the same directory structure)
 #   5. Model files are present at the right place
 #   6. There is no limitation on the amount of available RAM (This assumption make the program simpler.
@@ -50,32 +50,40 @@ g_logger = logging.getLogger('CNC')
 # ---
 
 # True if STDOUT and STDERR are connected to terminal (and NOT "a file or a pipe")
-# REFER: https://github.com/fenilgmehta/Context-Search-fms, https://github.com/alttch/neotermcolor
+# REFER: https://github.com/alttch/neotermcolor
 # REFER: https://stackoverflow.com/questions/1077113/how-do-i-detect-whether-sys-stdout-is-attached-to-terminal-or-not
 # NOTE: This checking of whether stdout and stderr are mapped to terminal or not is required to prevent some garbage
 #       values from inadvertently replacing starting lines of the log file to which stdout and stderr are redirected
 g_STD_OUT_ERR_TO_TERMINAL = (sys.stdout.isatty() and sys.stderr.isatty())
+
 # REFER: https://stackoverflow.com/questions/3172470/actual-meaning-of-shell-true-in-subprocess
 g_BASH_PATH = subprocess.check_output(['which', 'bash'], shell=False).decode().strip()
 
 
 def run_command(cmd: str, default_result: str = '', debug_print: bool = False) -> Tuple[bool, str]:
-    """
+    """Execute `cmd` using bash
+
     `stderr` is merged with `stdout`
 
     Returns:
         Tuple of [ok, output]
     """
-    # REFER: Context-Search-fms
     if debug_print:
         g_logger.debug(f'COMMAND:\n`{cmd}`')
     try:
-        # NOTE: Not using the below line of code because "sh" shell does not seem to properly parse the command
-        #       Example: `kill -s SIGINT 12345`
-        #                did not work and gave the following error:
-        #                '/bin/sh: 1: kill: invalid signal number or name: SIGINT'
-        #       The error logs of testing has been put in "REPO/logs/2022-01-22_ssh_kill_errors.txt"
-        # status_code, output = subprocess.getstatusoutput(cmd)
+        # NOTE: Not using the below lines of code because they use "sh" shell,
+        #       and it does not seem to properly parse the command.
+        #           >>> status_code, output = subprocess.getstatusoutput(cmd)
+        #           >>> os.system(...)  # Has the same issue because it uses `sh`
+        #   Example 1: `$ kill -s SIGINT 12345` did not work and gave the following error:
+        #                  '/bin/sh: 1: kill: invalid signal number or name: SIGINT'
+        #              The error logs of testing has been put in "REPO/logs/2022-01-22_ssh_kill_errors.txt"
+        #   Example 2: Run the below command in `bash`, `zsh` and `sh` to see the difference in behaviour
+        #              `$ echo cool 1>> /dev/stderr &> /dev/null`
+        #                  bash --> no output
+        #                  zsh  --> output="cool", unexpected behaviour is seen when redirecting stdout to stderr, and
+        #                                          unexpected behaviour has been seen with few other commands as well
+        #                  sh   --> output="cool", the command is launched asynchronously due of misinterpretation of &>
         output = subprocess.check_output(
             [g_BASH_PATH, '-c', cmd],
             stderr=subprocess.STDOUT,
@@ -98,7 +106,8 @@ def run_command(cmd: str, default_result: str = '', debug_print: bool = False) -
 
 
 def run_command_get_output(cmd: str, default_result: str = '0', debug_print: bool = False) -> str:
-    """
+    """Execute `cmd` using bash
+
     The return value in case of unsuccessful execution of command `cmd` is '0', because sometimes we have used
     this method to get PID of some process and used kill command to send some signal (SIGINT in most cases) to
     that PID. If the command `cmd` which is used to find the PID of the target process fails, then in that case
@@ -127,6 +136,7 @@ def run_command_get_output(cmd: str, default_result: str = '0', debug_print: boo
 # ---
 
 def delete_last_lines(n=1):
+    """Delete `n` number of lines from stdout. NOTE: This works only if stdout is mapped to a TTY."""
     # REFER: https://www.quora.com/How-can-I-delete-the-last-printed-line-in-Python-language
     for _ in range(n):
         sys.stdout.write('\x1b[1A')  # Cursor up one line
@@ -147,7 +157,9 @@ def get_free_swap() -> float:
 
 
 def get_execution_time(pid: Union[int, str]) -> int:
-    """Returns: execution time in seconds"""
+    """Returns: wall clock based execution time in seconds"""
+    # NOTE: etime measures "wall clock time", i.e. difference between now and the moment the process was started
+    #       REFER: https://stackoverflow.com/questions/17737531/linux-ps-command-get-process-running-time-different-between-etime-and-time-p
     # REFER: https://unix.stackexchange.com/questions/7870/how-to-check-how-long-a-process-has-been-running
     return int(run_command(f'ps -o etimes= -p "{pid}"', str(10 ** 15))[1])  # 10**15 seconds == ~3.17 crore years
 
@@ -159,9 +171,9 @@ def get_process_running_status(pid: Union[int, str]) -> bool:
 
 def file_hash_sha256(file_path) -> str:
     """
-    It is assumed that the file will exist
-
     This is same as `shasum -a 256 FilePath`. REFER: https://en.wikipedia.org/wiki/Secure_Hash_Algorithms
+
+    It is assumed that the file will exist
     """
     # REFER: https://stackoverflow.com/questions/16874598/how-do-i-calculate-the-md5-checksum-of-a-file-in-python
     total_bytes = os.path.getsize(file_path)
@@ -265,7 +277,7 @@ class SolverOutputAnalyzer:
 
     # NOTE: Baron Functions below
 
-    """
+    r"""
     ### Baron - v21.1.13
 
     ```sh
@@ -922,6 +934,7 @@ class MonitorAndStopper:
 
 
 def check_solution_status(tmux_monitor_list: List[NetworkExecutionInformation]) -> bool:
+    """Return True if a feasible solution has been found by any one of the tmux session (i.e. solver-model combination)"""
     for info in tmux_monitor_list:
         if g_settings.solvers[info.solver_name].check_solution_found(info):
             return True
@@ -956,7 +969,9 @@ def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) 
     return best_result_exec_info is not None, best_result_till_now, best_result_exec_info
 
 
-def main():
+def main() -> None:
+    """Launch the solvers and monitor them based on CLI parameters"""
+    # Create the required directory structure
     run_command_get_output(f'mkdir -p "{g_settings.OUTPUT_DIR_LEVEL_0}"')
     run_command_get_output(f'mkdir -p "{g_settings.OUTPUT_DIR_LEVEL_1_DATA}"')
     run_command_get_output(f'mkdir -p "{g_settings.output_dir_level_1_network_specific}"')
@@ -1013,6 +1028,7 @@ def main():
     g_logger.info('FINISHED: Execution of first batch of solvers')
 
     # Error checking - Round 1
+    # This is done to find and log the errors that occurred just after launching the tmux sessions
     g_logger.info('START: Error checking - Round 1')
     tmux_monitor_list_idx_to_remove = list()
     for idx, exec_info in enumerate(tmux_monitor_list):
@@ -1026,6 +1042,7 @@ def main():
     del tmux_monitor_list_idx_to_remove, idx, exec_info
     g_logger.info('FINISHED: Error checking - Round 1')
 
+    # If all (tmux) sessions of the first batch stopped because of some error, then exit the program
     g_logger.debug(f'{tmux_monitor_list=}')
     if len(tmux_monitor_list) == 0:
         g_logger.warning('Failed to start all solver model sessions')
@@ -1086,6 +1103,7 @@ def main():
     del execution_time_left
 
     # Error checking - Round 2
+    # This is done primarily for logging purpose
     g_logger.info('START: Error checking - Round 2')
     for exec_info in tmux_original_list:
         ok, err_msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
@@ -1095,6 +1113,10 @@ def main():
     del exec_info, ok, err_msg
     g_logger.info('FINISHED: Error checking - Round 2')
 
+    # - Check if any feasible solution has been found by the first batch of tmux sessions or not.
+    # - If no feasible solution has been found by any of the session of the first batch, then give them
+    #   limited amount of extra time to find a feasible solution.
+    # - If "a feasible solution is found" or "extra time has been consumed", then proceed with the second batch.
     # NOTE: `at_least_one_solution_found` variable is unused as of now. However, it may be needed in future.
     at_least_one_solution_found = False
     extra_time_given = 0
@@ -1111,8 +1133,8 @@ def main():
     at_least_one_solution_found = True
     del at_least_one_solution_found
 
-    # Begin execution of next batch
-    g_logger.info('START: Execution of final batch of solvers')
+    # Begin execution of the remaining solver-model combinations
+    g_logger.info('START: Execution of the remaining solver-model combinations')
     for i in range(min_combination_parallel_solvers, len(g_settings.solver_model_combinations)):
         g_logger.debug(run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}"', debug_print=True))
         tmux_sessions_running = int(run_command_get_output(
@@ -1134,9 +1156,12 @@ def main():
         g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
         time.sleep(0.2)
         del tmux_sessions_running, exec_info
-    g_logger.info('FINISHED: Execution of final batch of solvers')
+    g_logger.info('FINISHED: Execution of the remaining solver-model combinations')
 
-    # NOTE: The below loop is required to move finished tmux session from monitor list to finished list
+    # NOTE: The below loop is required to
+    #       1. wait for the tmux sessions specific to the current PID to stop (either naturally before the
+    #          execution time limit, or get forcefully stopped if execution time limit is exceeded)
+    #       2. move finished tmux session from monitor list to finished list
     while len(tmux_monitor_list):
         g_logger.debug("----------")
         g_logger.debug(f'{tmux_monitor_list=}')
@@ -1146,6 +1171,7 @@ def main():
         g_logger.debug(f'{len(tmux_finished_list)=}')
 
     # Error checking - Round 3 (last round)
+    # This is done primarily for logging purpose
     g_logger.info('START: Error checking - Round 3 (last round)')
     for exec_info in tmux_original_list:
         ok, err_msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
@@ -1161,6 +1187,14 @@ def main():
     run_command_get_output(f"cp -r /tmp/at*octsol /tmp/baron_tmp* '{g_settings.OUTPUT_DIR_LEVEL_1_DATA}'")
     g_logger.info('FINISHED: Copying solution files from /tmp to `g_settings.OUTPUT_DIR_LEVEL_1_DATA`')
 
+    # - Wait for the `tmux` sessions to truly end. This is required because, `MonitorAndStopper.mas_time`
+    #   only sends the SIGINT signal to the solvers. The solvers start their stopping process after receiving
+    #   this SIGINT signal. But, they do not stop immediately (one possible reason what was found in Octeract
+    #   was that it tries to "communicate the results to its servers" and keeps retrying for "some limited
+    #   number of times" if "the server is unreachable due to some reason").
+    # - If this loop is not there, then there is a possibility that we think that the solver-model combination
+    #   failed even if solver had found a "feasible or global" solution, because the solver had not returned the
+    #   final value of the variables that were to be calculated/found to AMPL for printing (here, to std_out_err.txt)
     while run_command(f'tmux ls 2> /dev/null | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l', '0', True)[1] != '0':
         g_logger.info('WAITING for the tmux instances to stop (probably AMPL or some solver has not terminated)')
         time.sleep(10)
@@ -1227,11 +1261,16 @@ def main():
 
 
 def update_settings(args: argparse.Namespace):
+    """
+    Store the settings in g_settings object
+
+    Args:
+        args: command line arguments parsed by `argparse`
+    """
     global g_logger
 
     g_settings.debug = args.debug
 
-    # REFER: Context-Search-fms
     # If STDOUT and STDERR are connected to a terminal, then use `rich` logging, otherwise simple logging
     if (os.getenv('ANSI_COLORS_DISABLED') is None) and (sys.stdout.isatty() and sys.stderr.isatty()):
         # noinspection PyArgumentList
@@ -1256,6 +1295,7 @@ def update_settings(args: argparse.Namespace):
 
     g_logger.debug(args)
 
+    # Check if the network file exists or not
     if not os.path.exists(args.path):
         g_logger.error(f"Cannot access '{args.path}': No such file or directory")
         exit(2)
@@ -1300,6 +1340,19 @@ def update_settings(args: argparse.Namespace):
 
 # REFER: https://stackoverflow.com/questions/1265665/how-can-i-check-if-a-string-represents-an-int-without-using-try-except
 def parser_check_solver_models(val: str) -> str:
+    """
+    Validate that `val` is of the format 'SolverName ModelId [ModelId ...]', and:
+        1. SolverName is present in `AutoExecutorSettings.AVAILABLE_SOLVERS`
+        2. ModelId is an `int`
+        3. ModelId is present in `AutoExecutorSettings.AVAILABLE_MODELS.keys()`
+
+    Args:
+        val: the value passed as commandline parameter
+
+    Returns:
+        `val` as it is
+    """
+    # Perform splitting based on spaces
     val_splitted = val.split()
     if len(val_splitted) == 0:
         raise argparse.ArgumentTypeError(f"no value passed")
