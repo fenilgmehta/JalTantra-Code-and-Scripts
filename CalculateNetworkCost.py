@@ -201,13 +201,73 @@ def file_hash_sha256(file_path) -> str:
 
 # ---
 
-class SolverOutputAnalyzer:
-    """
-    Perform output analysis (i.e. extract solution, error messages and other necessary information) for various solvers
-    """
+class SolverOutputAnalyzerParent:
+    def __init__(self, engine_path: str, engine_options: str, process_name_to_stop_using_ctrl_c: str):
+        """
+        Perform output analysis (i.e. extract solution, error messages and other necessary information) for various solvers
+
+        Args:
+            engine_path: Path to the solver that will be used by AMPL
+            engine_options: Solver specific parameters in AMPL format
+            process_name_to_stop_using_ctrl_c: Name of the process that is to be stopped using
+                                               Ctrl+C (i.e. SIGINT signal) such that solver smartly
+                                               gives us the best solution found till that moment
+        """
+        self.engine_path = engine_path
+        self.engine_options = engine_options
+        self.process_name_to_stop_using_ctrl_c = process_name_to_stop_using_ctrl_c
+
+    def check_solution_found(self, exec_info: 'NetworkExecutionInformation') -> bool:
+        """
+        Parses the output (stdout and stderr) of the solver and tells us
+        whether the solver has found any feasible solution or not
+
+        Args:
+            exec_info: NetworkExecutionInformation object having all information regarding the execution of the solver
+
+        Returns:
+             A boolean value telling whether the solver found any feasible solution or not
+        """
+        g_logger.error(f"`self.check_solution_found` is 'Not Implemented' for {self.engine_path=}")
+        return True
+
+    def extract_best_solution(self, exec_info: 'NetworkExecutionInformation') -> Tuple[bool, float]:
+        """
+        Parses the output (stdout and stderr) of the solver and tells us
+        whether the solver has found any feasible solution or not, and if
+        it has, then return its value as well.
+
+        Args:
+            exec_info: NetworkExecutionInformation object having all information regarding the execution of the solver
+
+        Returns:
+             A boolean value telling whether the solver found any feasible solution or not
+             A float value which is the optimal solution found till that moment
+        """
+        g_logger.error(f"`self.extract_best_solution` is 'Not Implemented' for {self.engine_path=}")
+        return True, 0.0
+
+    def check_errors(self, exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
+        """By default, it is assumed that everything is ok (i.e. error free)"""
+        g_logger.error(f"`self.check_errors` is 'Not Implemented' for {self.engine_path=}")
+        return True, '?'
+
+    def extract_solution_vector(self, exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str, float, str]:
+        g_logger.error(f"`self.extract_solution_vector` is 'Not Implemented' for {self.engine_path=}")
+        return False, '?', float('nan'), '?'
 
     @staticmethod
     def ampl_check_errors(file_txt: str) -> Tuple[bool, str]:
+        """
+        Check if any error has occurred due to AMPL
+
+        Args:
+            file_txt: std_out_err.txt file content
+
+        Returns:
+            A boolean value telling whether everything is ok (True) or not (False)
+            A string value containing the error message
+        """
         # AMPL binary does not exist
         try:
             err_idx = file_txt.index('no such file or directory: ./ampl.linux-intel64/ampl')
@@ -275,8 +335,9 @@ class SolverOutputAnalyzer:
 
         return True, 'No Errors'
 
-    # NOTE: Baron Functions below
 
+class SolverOutputAnalyzerBaron(SolverOutputAnalyzerParent):
+    pass
     r"""
     ### Baron - v21.1.13
 
@@ -308,13 +369,14 @@ class SolverOutputAnalyzer:
     ```
     """
 
-    @staticmethod
-    def baron_extract_output_table(std_out_err_file_path: str) -> str:
+    def __init__(self, engine_path: str, engine_options: str, threads: int):
+        process_name_to_stop_using_ctrl_c = 'baron'  # For 1 core and multi core, same process is to be stopped
+        super().__init__(engine_path, engine_options, process_name_to_stop_using_ctrl_c)
+
+    def __baron_extract_output_table(self, std_out_err_file_path: str) -> str:
         return run_command_get_output(f"bash output_table_extractor_baron.sh '{std_out_err_file_path}'", '')
 
-    @staticmethod
-    def baron_extract_best_solution(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, float]:
-        """The processing done by this function depends on the output format of `extract_solution_baron(...)` method"""
+    def extract_best_solution(self, exec_info: 'NetworkExecutionInformation') -> Tuple[bool, float]:
         # Extract the solution from the std_out_err file using the value printed by the AMPL commands:
         #     option display_precision 0;
         #     display total_cost;
@@ -334,7 +396,7 @@ class SolverOutputAnalyzer:
 
         g_logger.info('Using fallback mechanism to extract the best solution')
 
-        csv = SolverOutputAnalyzer.baron_extract_output_table(exec_info.uniq_std_out_err_file_path)
+        csv = self.__baron_extract_output_table(exec_info.uniq_std_out_err_file_path)
         if csv == '':
             return False, 0.0
         lines = csv.split('\n')
@@ -351,15 +413,13 @@ class SolverOutputAnalyzer:
             ok = False
         return ok, best_solution
 
-    @staticmethod
-    def baron_check_solution_found(exec_info: 'NetworkExecutionInformation') -> bool:
-        return SolverOutputAnalyzer.baron_extract_best_solution(exec_info)[0]
+    def check_solution_found(self, exec_info: 'NetworkExecutionInformation') -> bool:
+        return self.extract_best_solution(exec_info)[0]
 
-    @staticmethod
-    def baron_check_errors(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
+    def check_errors(self, exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
         file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
 
-        ok, err_msg = SolverOutputAnalyzer.ampl_check_errors(file_txt)
+        ok, err_msg = self.ampl_check_errors(file_txt)
         if not ok:
             return ok, err_msg
 
@@ -387,17 +447,15 @@ class SolverOutputAnalyzer:
 
         return True, 'No Errors'
 
-    @staticmethod
-    def baron_extract_solution_file_path(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
+    def __baron_extract_solution_file_path(self, exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
         file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
         solution_dir_name = re.search(r'Retaining scratch directory "/tmp/(.+)"\.', file_txt).group(1)
         if solution_dir_name == '':
             return False, 'RegEx search failed'
         return True, (pathlib.Path(exec_info.aes.OUTPUT_DIR_LEVEL_1_DATA) / solution_dir_name / 'res.lst').resolve()
 
-    @staticmethod
-    def baron_extract_solution_vector(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str, float, str]:
-        ok, file_to_parse = SolverOutputAnalyzer.baron_extract_solution_file_path(exec_info)
+    def extract_solution_vector(self, exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str, float, str]:
+        ok, file_to_parse = self.__baron_extract_solution_file_path(exec_info)
         if not ok:
             return False, file_to_parse, float('nan'), 'Failed to extract solution file path'
         file_txt = open(file_to_parse, 'r').read()
@@ -429,19 +487,26 @@ class SolverOutputAnalyzer:
         # noinspection PyUnreachableCode
         return False, file_to_parse, objective_value, 'FIXME: Unhandled unknown case'
 
-    # NOTE: Octeract Functions below
 
+class SolverOutputAnalyzerOcteract(SolverOutputAnalyzerParent):
     """
-    Please refer to Octeract documentation for details: https://ampl.com/BOOK/CHAPTERS/
+    Perform output analysis (i.e. extract solution, error messages and other necessary information) for Octeract solver
+
+    Please refer to Octeract documentation for details: https://docs.octeract.com/#solver_options
     """
 
-    @staticmethod
-    def octeract_extract_output_table(std_out_err_file_path: str) -> str:
+    def __init__(self, engine_path: str, engine_options: str, threads: int):
+        # For 1 core, process with name 'octeract-engine' is the be stopped using Control+C
+        # For multi core, process with name 'mpirun' is the be stopped using Control+C
+        process_name_to_stop_using_ctrl_c = 'octeract-engine'
+        if threads > 1:
+            process_name_to_stop_using_ctrl_c = 'mpirun'
+        super().__init__(engine_path, engine_options, process_name_to_stop_using_ctrl_c)
+
+    def __octeract_extract_output_table(self, std_out_err_file_path: str) -> str:
         return run_command_get_output(f"bash output_table_extractor_octeract.sh '{std_out_err_file_path}'", '')
 
-    @staticmethod
-    def octeract_extract_best_solution(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, float]:
-        """The processing done by this function depends on the output format of `extract_solution_octeract(...)` method"""
+    def extract_best_solution(self, exec_info: 'NetworkExecutionInformation') -> Tuple[bool, float]:
         # Extract the solution from the std_out_err file using the value printed by the AMPL commands:
         #     option display_precision 0;
         #     display total_cost;
@@ -478,7 +543,7 @@ class SolverOutputAnalyzer:
                 pass
 
         # Use bash script to extract the values from the table printed to output by Octeract
-        csv = SolverOutputAnalyzer.octeract_extract_output_table(exec_info.uniq_std_out_err_file_path)
+        csv = self.__octeract_extract_output_table(exec_info.uniq_std_out_err_file_path)
         if csv == '':
             return False, 0.0
         lines = csv.split('\n')
@@ -502,12 +567,10 @@ class SolverOutputAnalyzer:
         g_logger.debug((status, best_solution))
         return status, best_solution
 
-    @staticmethod
-    def octeract_check_solution_found(exec_info: 'NetworkExecutionInformation') -> bool:
-        return SolverOutputAnalyzer.octeract_extract_best_solution(exec_info)[0]
+    def check_solution_found(self, exec_info: 'NetworkExecutionInformation') -> bool:
+        return self.extract_best_solution(exec_info)[0]
 
-    @staticmethod
-    def octeract_check_errors(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
+    def check_errors(self, exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
         file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
 
         if 'Found solution during preprocessing' in file_txt:
@@ -515,7 +578,7 @@ class SolverOutputAnalyzer:
         if 'Iteration            GAP               LLB          BUB            Pool       Time       Mem' in file_txt:
             return True, 'Probably No Errors'
 
-        ok, err_msg = SolverOutputAnalyzer.ampl_check_errors(file_txt)
+        ok, err_msg = self.ampl_check_errors(file_txt)
         if not ok:
             return ok, err_msg
 
@@ -586,8 +649,7 @@ class SolverOutputAnalyzer:
 
         return True, 'No Errors'
 
-    @staticmethod
-    def octeract_extract_solution_file_path(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
+    def __octeract_extract_solution_file_path(self, exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str]:
         file_txt = open(exec_info.uniq_std_out_err_file_path, 'r').read()
         solution_file_name = re.search(r'Solution file written to: /tmp/(.+)', file_txt).group(1)
         if solution_file_name == '':
@@ -595,9 +657,8 @@ class SolverOutputAnalyzer:
             return False, 'RegEx search failed'
         return True, (pathlib.Path(exec_info.aes.OUTPUT_DIR_LEVEL_1_DATA) / solution_file_name).resolve()
 
-    @staticmethod
-    def octeract_extract_solution_vector(exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str, float, str]:
-        ok, file_to_parse = SolverOutputAnalyzer.octeract_extract_solution_file_path(exec_info)
+    def extract_solution_vector(self, exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str, float, str]:
+        ok, file_to_parse = self.__octeract_extract_solution_file_path(exec_info)
         if not ok:
             return False, file_to_parse, float('nan'), ''
         json_data = json.loads(open(file_to_parse, 'r').read())
@@ -620,7 +681,7 @@ class NetworkExecutionInformation:
         self.idx: int = idx
         self.aes: 'AutoExecutorSettings' = aes
         self.solver_name, self.model_name = aes.solver_model_combinations[idx]
-        self.solver_info: SolverInformation = aes.solvers[self.solver_name]
+        self.solver_info: SolverOutputAnalyzerParent = aes.solvers[self.solver_name]
 
         # REFER: https://stackoverflow.com/a/66771847
         self.short_uniq_model_name: str = self.model_name[:self.model_name.find('_')]
@@ -656,74 +717,7 @@ class NetworkExecutionInformation:
         return self.__str__()
 
 
-class SolverInformation:
-    def __init__(self, engine_path: str, engine_options: str, process_name_to_stop_using_ctrl_c: str,
-                 fn_check_solution_found, fn_extract_best_solution, fn_check_errors, fn_extract_solution_vector):
-        """
-        Args:
-            engine_path: Path to the solver that will be used by AMPL
-            engine_options: Solver specific parameters in AMPL format
-            process_name_to_stop_using_ctrl_c: Name of the process that is to be stopped using
-                                               Ctrl+C (i.e. SIGINT signal) such that solver smartly
-                                               gives us the best solution found till that moment
-            fn_check_solution_found: This should be a function that accepts a variable
-                                     of type `class NetworkExecutionInformation`
-        """
-        self.engine_path = engine_path
-        self.engine_options = engine_options
-        self.process_name_to_stop_using_ctrl_c = process_name_to_stop_using_ctrl_c
-        self.fn_check_solution_found = fn_check_solution_found
-        self.fn_extract_best_solution = fn_extract_best_solution
-        self.fn_check_errors = fn_check_errors
-        self.fn_extract_solution_vector = fn_extract_solution_vector
-
-    def check_solution_found(self, exec_info: NetworkExecutionInformation) -> bool:
-        """
-        Parses the output (stdout and stderr) of the solver and tells us
-        whether the solver has found any feasible solution or not
-
-        Args:
-            exec_info: NetworkExecutionInformation object having all information regarding the execution of the solver
-
-        Returns:
-             A boolean value telling whether the solver found any feasible solution or not
-        """
-        if self.fn_check_solution_found is None:
-            g_logger.error(f"`self.fn_check_solution_found` is `None` for self.engine_path='{self.engine_path}'")
-            return True
-        return self.fn_check_solution_found(exec_info)
-
-    def extract_best_solution(self, exec_info: NetworkExecutionInformation) -> Tuple[bool, float]:
-        """
-        Parses the output (stdout and stderr) of the solver and tells us
-        whether the solver has found any feasible solution or not, and if
-        it has, then return its value as well.
-
-        Args:
-            exec_info: NetworkExecutionInformation object having all information regarding the execution of the solver
-
-        Returns:
-             A boolean value telling whether the solver found any feasible solution or not
-             A float value which is the optimal solution found till that moment
-        """
-        if self.fn_extract_best_solution is None:
-            g_logger.error(f"`self.fn_check_solution_found` is `None` for self.engine_path='{self.engine_path}'")
-            return True, 0.0
-        return self.fn_extract_best_solution(exec_info)
-
-    def check_errors(self, exec_info: NetworkExecutionInformation) -> Tuple[bool, str]:
-        """By default, it is assumed that everything is ok (i.e. error free)"""
-        if self.fn_check_errors is None:
-            g_logger.error(f"`self.fn_check_errors` is `None` for self.engine_path='{self.engine_path}'")
-            return True, '?'
-        return self.fn_check_errors(exec_info)
-
-    def extract_solution_vector(self, exec_info: NetworkExecutionInformation) -> Tuple[bool, str, float, str]:
-        if self.fn_extract_solution_vector is None:
-            g_logger.error(f"`self.fn_extract_solution_vector` is `None` for self.engine_path='{self.engine_path}'")
-            return False, '?', float('nan'), '?'
-        return self.fn_extract_solution_vector(exec_info)
-
+# ---
 
 class AutoExecutorSettings:
     # Level 0 is main directory inside which everything will exist
@@ -732,7 +726,7 @@ class AutoExecutorSettings:
     # Please ensure that proper escaping of white spaces and other special characters
     # is done because this will be executed in a fashion similar to `./a.out`
     AMPL_PATH = './ampl.linux-intel64/ampl'
-    AVAILABLE_SOLVERS = ['baron', 'octeract']
+    AVAILABLE_SOLVERS = ['baron', 'octeract']  # NOTE: Also look at `__update_solver_dict()` method when updating this
     AVAILABLE_MODELS = {1: 'm1_basic.R', 2: 'm2_basic2_v2.R', 3: 'm3_descrete_segment.R', 4: 'm4_parallel_links.R'}
     TMUX_UNIQUE_PREFIX = f'AR_NC_{os.getpid()}_'  # AR = Auto Run, NC = Network Cost
 
@@ -747,7 +741,7 @@ class AutoExecutorSettings:
         self.r_min_free_swap = 8  # GiB, usefulness of this variable depends on the swappiness of the system
 
         self.models_dir = "./Files/Models"  # m1, m3 => q   ,   m2, m4 => q1, q2
-        self.solvers: Dict[str, SolverInformation] = {}
+        self.solvers: Dict[str, SolverOutputAnalyzerParent] = {}
         self.__update_solver_dict()
 
         # Tuples of (Solver name & Model name) which are to be executed to
@@ -764,26 +758,16 @@ class AutoExecutorSettings:
         # NOTE: Update `AutoExecutorSettings.AVAILABLE_SOLVERS` if keys in below dictionary are updated
         # NOTE: Use double quotes ONLY in the below variables
         self.solvers = {
-            'baron': SolverInformation(
+            'baron': SolverOutputAnalyzerBaron(
                 engine_path='./ampl.linux-intel64/baron',
                 engine_options=f'option baron_options "threads={self.r_cpu_cores_per_solver} '
                                f'barstats keepsol lsolmsg outlev=1 prfreq=100 prtime=2 problem";',
-                process_name_to_stop_using_ctrl_c='baron',  # For 1 core and multi core, same process is to be stopped
-                fn_check_solution_found=SolverOutputAnalyzer.baron_check_solution_found,
-                fn_extract_best_solution=SolverOutputAnalyzer.baron_extract_best_solution,
-                fn_check_errors=SolverOutputAnalyzer.baron_check_errors,
-                fn_extract_solution_vector=SolverOutputAnalyzer.baron_extract_solution_vector
+                threads=self.r_cpu_cores_per_solver
             ),
-            'octeract': SolverInformation(
+            'octeract': SolverOutputAnalyzerOcteract(
                 engine_path='./octeract-engine-4.0.0/bin/octeract-engine',
                 engine_options=f'options octeract_options "num_cores={self.r_cpu_cores_per_solver}";',
-                # For 1 core, process with name 'octeract-engine' is the be stopped using Control+C
-                # For multi core, process with name 'mpirun' is the be stopped using Control+C
-                process_name_to_stop_using_ctrl_c='mpirun' if self.r_cpu_cores_per_solver > 1 else 'octeract-engine',
-                fn_check_solution_found=SolverOutputAnalyzer.octeract_check_solution_found,
-                fn_extract_best_solution=SolverOutputAnalyzer.octeract_extract_best_solution,
-                fn_check_errors=SolverOutputAnalyzer.octeract_check_errors,
-                fn_extract_solution_vector=SolverOutputAnalyzer.octeract_extract_solution_vector
+                threads=self.r_cpu_cores_per_solver
             )
         }
 
@@ -865,9 +849,6 @@ echo > /dev/null
         return info
 
 
-g_settings = AutoExecutorSettings()
-
-
 # ---
 
 class MonitorAndStopper:
@@ -936,13 +917,15 @@ class MonitorAndStopper:
 def check_solution_status(tmux_monitor_list: List[NetworkExecutionInformation]) -> bool:
     """Return True if a feasible solution has been found by any one of the tmux session (i.e. solver-model combination)"""
     for info in tmux_monitor_list:
-        if g_settings.solvers[info.solver_name].check_solution_found(info):
+        if info.solver_info.check_solution_found(info):
             return True
     return False
 
 
-def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) -> \
-        Tuple[bool, float, Optional[NetworkExecutionInformation]]:
+def extract_best_solution(
+        tmux_monitor_list: List[NetworkExecutionInformation],
+        result_summary_file_path: str
+) -> Tuple[bool, float, Optional[NetworkExecutionInformation]]:
     """
     Args:
         tmux_monitor_list: List of `NetworkExecutionInformation` which have finished their execution
@@ -953,7 +936,7 @@ def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) 
     all_results: List = list()  # Only used for debugging
     best_result_till_now, best_result_exec_info = float('inf'), None
     for exec_info in tmux_monitor_list:
-        ok, curr_res = g_settings.solvers[exec_info.solver_name].extract_best_solution(exec_info)
+        ok, curr_res = exec_info.solver_info.extract_best_solution(exec_info)
         all_results.append((exec_info.solver_name, exec_info.short_uniq_model_name, ok, curr_res))
         g_logger.info(f'solver={exec_info.solver_name}, model={exec_info.short_uniq_model_name}, {ok=}, {curr_res=}')
         # `if` solution not found by this solver instance `or` a better solution is already known, then `continue`
@@ -965,20 +948,20 @@ def extract_best_solution(tmux_monitor_list: List[NetworkExecutionInformation]) 
     for (solver_name, model_name, ok, res) in all_results:
         g_logger.info(f'solver={solver_name}, model={model_name}, {ok=}, {res=}')
         run_command(f"echo 'solver={solver_name}, model={model_name}, {ok=}, {res=}'"
-                    f" >> '{g_settings.output_result_summary_file}'")
+                    f" >> '{result_summary_file_path}'")
     return best_result_exec_info is not None, best_result_till_now, best_result_exec_info
 
 
-def main() -> None:
+def main(my_settings: AutoExecutorSettings) -> None:
     """Launch the solvers and monitor them based on CLI parameters"""
     # Create the required directory structure
-    run_command_get_output(f'mkdir -p "{g_settings.OUTPUT_DIR_LEVEL_0}"')
-    run_command_get_output(f'mkdir -p "{g_settings.OUTPUT_DIR_LEVEL_1_DATA}"')
-    run_command_get_output(f'mkdir -p "{g_settings.output_dir_level_1_network_specific}"')
+    run_command_get_output(f'mkdir -p "{my_settings.OUTPUT_DIR_LEVEL_0}"')
+    run_command_get_output(f'mkdir -p "{my_settings.OUTPUT_DIR_LEVEL_1_DATA}"')
+    run_command_get_output(f'mkdir -p "{my_settings.output_dir_level_1_network_specific}"')
 
     # Create hardlink to the file passed using -p/--path parameter
     run_command(
-        f"ln '{g_settings.data_file_path}' '{(pathlib.Path(g_settings.output_dir_level_1_network_specific) / '0_graph_network_data_testcase.R').resolve()}'"
+        f"ln '{my_settings.data_file_path}' '{(pathlib.Path(my_settings.output_dir_level_1_network_specific) / '0_graph_network_data_testcase.R').resolve()}'"
     )
 
     # Write metadata to "0_metadata" file
@@ -987,15 +970,15 @@ def main() -> None:
     current_time = datetime.datetime.now()  # REFER: https://www.geeksforgeeks.org/get-current-timestamp-using-python/
     metadata_json_str = json.dumps(
         dict(
-            unique_prefix=g_settings.TMUX_UNIQUE_PREFIX,
+            unique_prefix=my_settings.TMUX_UNIQUE_PREFIX,
             start_time=str(current_time),
             start_timestamp=current_time.timestamp(),
-            solver_execution_time_limit_in_seconds=g_settings.r_execution_time_limit,
-            solver_cpu_cores=g_settings.r_cpu_cores_per_solver,
+            solver_execution_time_limit_in_seconds=my_settings.r_execution_time_limit,
+            solver_cpu_cores=my_settings.r_cpu_cores_per_solver,
         ),
         indent=2
     )
-    with open(f'{g_settings.output_dir_level_1_network_specific}/0_metadata', 'w') as metadata_file:
+    with open(f'{my_settings.output_dir_level_1_network_specific}/0_metadata', 'w') as metadata_file:
         metadata_file.write(metadata_json_str)
     del current_time, metadata_json_str, metadata_file
     g_logger.info('FINISHED: Writing requests metadata to 0_metadata file')
@@ -1005,15 +988,15 @@ def main() -> None:
     tmux_finished_list: List[NetworkExecutionInformation] = list()
 
     min_combination_parallel_solvers = min(
-        len(g_settings.solver_model_combinations),
-        g_settings.r_max_parallel_solvers
+        len(my_settings.solver_model_combinations),
+        my_settings.r_max_parallel_solvers
     )
 
     # Begin execution of first batch
     g_logger.info('START: Execution of first batch of solvers')
-    run_command(f"echo 'running' > {g_settings.output_dir_level_1_network_specific}/0_status")
+    run_command(f"echo 'running' > {my_settings.output_dir_level_1_network_specific}/0_status")
     for i in range(min_combination_parallel_solvers):
-        exec_info = g_settings.start_solver(i)
+        exec_info = my_settings.start_solver(i)
         g_logger.debug(str(exec_info))
         g_logger.debug(f'{exec_info.tmux_bash_pid=}')
         if exec_info.tmux_bash_pid == '0':
@@ -1035,7 +1018,7 @@ def main() -> None:
         if get_process_running_status(exec_info.tmux_bash_pid):
             continue
         g_logger.warning(f'tmux session stopped "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
-        g_logger.error(g_settings.solvers[exec_info.solver_name].check_errors(exec_info))
+        g_logger.error(exec_info.solver_info.check_errors(exec_info))
         tmux_monitor_list_idx_to_remove.append(idx)
     for idx in reversed(tmux_monitor_list_idx_to_remove):
         tmux_finished_list.insert(0, tmux_monitor_list.pop(idx))
@@ -1050,16 +1033,16 @@ def main() -> None:
         # appropriate error messages to STDOUT (which are redirected to "Solver_m1_NetworkHash/std_out_err.txt")
         g_logger.info('Sleep for 20 seconds for AMPL and the solver to terminate properly')
         time.sleep(20)
-        run_command(f"echo 'launch_error' > {g_settings.output_dir_level_1_network_specific}/0_status")
+        run_command(f"echo 'launch_error' > {my_settings.output_dir_level_1_network_specific}/0_status")
         for exec_info in tmux_finished_list:
-            ok, msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
+            ok, msg = exec_info.solver_info.check_errors(exec_info)
             if ok:
                 continue
             # REFER: https://stackoverflow.com/questions/1250079/how-to-escape-single-quotes-within-single-quoted-strings
             msg = msg.replace("'", "'\"'\"'")
             run_command(f"echo '\n---+++---\n\n{exec_info.solver_name}, {exec_info.short_uniq_model_name}'"
-                        f" >> {g_settings.output_dir_level_1_network_specific}/0_status")
-            run_command(f"echo '\n{msg}' >> {g_settings.output_dir_level_1_network_specific}/0_status")
+                        f" >> {my_settings.output_dir_level_1_network_specific}/0_status")
+            run_command(f"echo '\n{msg}' >> {my_settings.output_dir_level_1_network_specific}/0_status")
         exit(3)
 
     # TODO: Problem: Handle case of deadlock like situation
@@ -1074,14 +1057,16 @@ def main() -> None:
     #         2. Some error occur in the execution of a one of
     #            `g_settings.solver_model_combinations[:g_settings.MAX_PARALLEL_SOLVERS]`
     #            way before `g_settings.EXECUTION_TIME_LIMIT`
-    execution_time_left = g_settings.r_execution_time_limit
+    execution_time_left = my_settings.r_execution_time_limit
     while execution_time_left >= 5:
         g_logger.debug(f'Time Finished = '
-                       f'{str(datetime.timedelta(seconds=g_settings.r_execution_time_limit - execution_time_left))}'
+                       f'{str(datetime.timedelta(seconds=my_settings.r_execution_time_limit - execution_time_left))}'
                        f', Time Left = {str(datetime.timedelta(seconds=execution_time_left))}')
-        g_logger.debug("Tmux session count = " +
-                       run_command_get_output(f'tmux ls 2> /dev/null | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
-        if run_command(f'tmux ls 2> /dev/null | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l', '0')[1] == '0':
+        g_logger.debug(
+            "Tmux session count = " +
+            run_command_get_output(f'tmux ls 2> /dev/null | grep "{my_settings.TMUX_UNIQUE_PREFIX}" | wc -l')
+        )
+        if run_command(f'tmux ls 2> /dev/null | grep "{my_settings.TMUX_UNIQUE_PREFIX}" | wc -l', '0')[1] == '0':
             g_logger.info(f'{execution_time_left=}')
             g_logger.info('CHECKME: Skipping the sleep/wait operation as no tmux session is '
                           'running, probably some error or the solver(s) exited early')
@@ -1090,14 +1075,16 @@ def main() -> None:
             break
         time.sleep(5)
         execution_time_left -= 5
-        if g_settings.debug and g_STD_OUT_ERR_TO_TERMINAL:
+        if my_settings.debug and g_STD_OUT_ERR_TO_TERMINAL:
             delete_last_lines(2)
     if execution_time_left <= 5:
         time.sleep(execution_time_left)
         g_logger.info(f'Initial time limit over '
-                      f'(i.e. {str(datetime.timedelta(seconds=g_settings.r_execution_time_limit))})')
-        g_logger.debug("Tmux session count = " +
-                       run_command_get_output(f'tmux ls 2> /dev/null | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'))
+                      f'(i.e. {str(datetime.timedelta(seconds=my_settings.r_execution_time_limit))})')
+        g_logger.debug(
+            "Tmux session count = " +
+            run_command_get_output(f'tmux ls 2> /dev/null | grep "{my_settings.TMUX_UNIQUE_PREFIX}" | wc -l')
+        )
     else:
         g_logger.info('while loop forcefully stopped using `break` as no `tmux` session were running')
     del execution_time_left
@@ -1106,7 +1093,7 @@ def main() -> None:
     # This is done primarily for logging purpose
     g_logger.info('START: Error checking - Round 2')
     for exec_info in tmux_original_list:
-        ok, err_msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
+        ok, err_msg = exec_info.solver_info.check_errors(exec_info)
         if not ok:
             g_logger.warning(str(exec_info))
             g_logger.error(err_msg)
@@ -1138,25 +1125,25 @@ def main() -> None:
 
     # Begin execution of the remaining solver-model combinations
     g_logger.info('START: Execution of the remaining solver-model combinations')
-    for i in range(min_combination_parallel_solvers, len(g_settings.solver_model_combinations)):
-        g_logger.debug(run_command_get_output(f'tmux ls | grep "{g_settings.TMUX_UNIQUE_PREFIX}"', debug_print=True))
+    for i in range(min_combination_parallel_solvers, len(my_settings.solver_model_combinations)):
+        g_logger.debug(run_command_get_output(f'tmux ls | grep "{my_settings.TMUX_UNIQUE_PREFIX}"', debug_print=True))
 
         while True:
             tmux_sessions_running = int(run_command_get_output(
-                f'tmux ls 2> /dev/null | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l'
+                f'tmux ls 2> /dev/null | grep "{my_settings.TMUX_UNIQUE_PREFIX}" | wc -l'
             ))
             g_logger.debug(tmux_sessions_running)
 
-            if tmux_sessions_running < g_settings.r_max_parallel_solvers:
+            if tmux_sessions_running < my_settings.r_max_parallel_solvers:
                 break
             g_logger.debug("----------")
             g_logger.debug(f'{tmux_monitor_list=}')
             g_logger.debug(f'{len(tmux_finished_list)=}')
-            MonitorAndStopper.mas_time(tmux_monitor_list, tmux_finished_list, g_settings.r_execution_time_limit, True)
+            MonitorAndStopper.mas_time(tmux_monitor_list, tmux_finished_list, my_settings.r_execution_time_limit, True)
             g_logger.debug(f'{tmux_monitor_list=}')
             g_logger.debug(f'{len(tmux_finished_list)=}')
 
-        exec_info = g_settings.start_solver(i)
+        exec_info = my_settings.start_solver(i)
         tmux_original_list.append(exec_info)
         tmux_monitor_list.append(exec_info)
         g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
@@ -1172,7 +1159,7 @@ def main() -> None:
         g_logger.debug("----------")
         g_logger.debug(f'{tmux_monitor_list=}')
         g_logger.debug(f'{len(tmux_finished_list)=}')
-        MonitorAndStopper.mas_time(tmux_monitor_list, tmux_finished_list, g_settings.r_execution_time_limit, True)
+        MonitorAndStopper.mas_time(tmux_monitor_list, tmux_finished_list, my_settings.r_execution_time_limit, True)
         g_logger.debug(f'{tmux_monitor_list=}')
         g_logger.debug(f'{len(tmux_finished_list)=}')
 
@@ -1180,7 +1167,7 @@ def main() -> None:
     # This is done primarily for logging purpose
     g_logger.info('START: Error checking - Round 3 (last round)')
     for exec_info in tmux_original_list:
-        ok, err_msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
+        ok, err_msg = exec_info.solver_info.check_errors(exec_info)
         if not ok:
             g_logger.warning(str(exec_info))
             g_logger.error(err_msg)
@@ -1190,7 +1177,7 @@ def main() -> None:
     # NOTE: We will not copy files with glob `/tmp/at*nl` because they
     #       are only used to pass information from AMPL to solver
     g_logger.info('START: Copying solution files from /tmp to `g_settings.OUTPUT_DIR_LEVEL_1_DATA`')
-    run_command_get_output(f"cp -r /tmp/at*octsol /tmp/baron_tmp* '{g_settings.OUTPUT_DIR_LEVEL_1_DATA}'")
+    run_command_get_output(f"cp -r /tmp/at*octsol /tmp/baron_tmp* '{my_settings.OUTPUT_DIR_LEVEL_1_DATA}'")
     g_logger.info('FINISHED: Copying solution files from /tmp to `g_settings.OUTPUT_DIR_LEVEL_1_DATA`')
 
     # - Wait for the `tmux` sessions to truly end. This is required because, `MonitorAndStopper.mas_time`
@@ -1201,82 +1188,84 @@ def main() -> None:
     # - If this loop is not there, then there is a possibility that we think that the solver-model combination
     #   failed even if solver had found a "feasible or global" solution, because the solver had not returned the
     #   final value of the variables that were to be calculated/found to AMPL for printing (here, to std_out_err.txt)
-    while run_command(f'tmux ls 2> /dev/null | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l', '0', True)[1] != '0':
+    while run_command(f'tmux ls 2> /dev/null | grep "{my_settings.TMUX_UNIQUE_PREFIX}" | wc -l', '0', True)[1] != '0':
         g_logger.info('WAITING for the tmux instances to stop (probably AMPL or some solver has not terminated)')
         time.sleep(10)
 
     g_logger.info('START: Extracting best solution among all solver-model instances')
     g_logger.debug(f'{len(tmux_monitor_list)=}')
     g_logger.debug(f'{len(tmux_finished_list)=}')
-    status, best_cost, best_cost_instance_exec_info = extract_best_solution(tmux_original_list)
+    status, best_cost, best_cost_instance_exec_info = extract_best_solution(tmux_original_list,
+                                                                            my_settings.output_result_summary_file)
     g_logger.debug((status, best_cost, str(best_cost_instance_exec_info)))
     g_logger.info('FINISHED: Extracting best solution among all solver-model instances')
 
     # Do not overwrite the result file of previous execution
     # Just rename the result file of previous execution
-    if os.path.exists(g_settings.output_network_specific_result):
-        path_prefix, path_suffix = os.path.splitext(g_settings.output_network_specific_result)
+    if os.path.exists(my_settings.output_network_specific_result):
+        path_prefix, path_suffix = os.path.splitext(my_settings.output_network_specific_result)
         new_path = None
         for i in range(1, 10_000_000):
             new_path = f'{path_prefix}_{i:07}{path_suffix}'
             if not os.path.exists(new_path):
                 break
-        os.rename(src=g_settings.output_network_specific_result, dst=new_path)
-        g_logger.info(f"Old Solution Renamed from '{os.path.split(g_settings.output_network_specific_result)[1]}'"
+        os.rename(src=my_settings.output_network_specific_result, dst=new_path)
+        g_logger.info(f"Old Solution Renamed from '{os.path.split(my_settings.output_network_specific_result)[1]}'"
                       f" -> '{os.path.split(new_path)[1]}'")
         del path_prefix, path_suffix, new_path, i
 
     g_logger.info('START: Writing the best solution found to result file')
     if not status:
         g_logger.error('NO feasible solution found')
-        run_command(f"echo '{status}' > '{g_settings.output_network_specific_result}'")
+        run_command(f"echo '{status}' > '{my_settings.output_network_specific_result}'")
         run_command(f"echo 'finished:Either some unknown error, or NO feasible solution found'"
-                    f" > {g_settings.output_dir_level_1_network_specific}/0_status")
+                    f" > {my_settings.output_dir_level_1_network_specific}/0_status")
         for exec_info in tmux_finished_list:
-            ok, msg = g_settings.solvers[exec_info.solver_name].check_errors(exec_info)
+            ok, msg = exec_info.solver_info.check_errors(exec_info)
             if ok:
                 continue
             msg = msg.replace("'", "'\"'\"'")
             run_command(f"echo '\n---+++---\n\n{exec_info.solver_name}, {exec_info.short_uniq_model_name}'"
-                        f" >> {g_settings.output_dir_level_1_network_specific}/0_status")
-            run_command(f"echo '\n{msg}' >> {g_settings.output_dir_level_1_network_specific}/0_status")
+                        f" >> {my_settings.output_dir_level_1_network_specific}/0_status")
+            run_command(f"echo '\n{msg}' >> {my_settings.output_dir_level_1_network_specific}/0_status")
         del exec_info, ok, msg
         g_logger.info('FINISHED: Writing the best solution found to result file')
         return
 
-    run_command(f"echo 'success' > {g_settings.output_dir_level_1_network_specific}/0_status")
-    status, file_to_parse, objective_value, solution_vector = g_settings.solvers[
-        best_cost_instance_exec_info.solver_name
-    ].extract_solution_vector(best_cost_instance_exec_info)
+    run_command(f"echo 'success' > {my_settings.output_dir_level_1_network_specific}/0_status")
+    status, file_to_parse, objective_value, solution_vector = \
+        best_cost_instance_exec_info.solver_info.extract_solution_vector(best_cost_instance_exec_info)
     g_logger.info(f'{best_cost=}')
     g_logger.info(f'Instance={best_cost_instance_exec_info}')
     g_logger.info(f'Solver={best_cost_instance_exec_info.solver_name}, '
                   f'Model={best_cost_instance_exec_info.short_uniq_model_name}')
-    run_command(f"echo '{status}' > '{g_settings.output_network_specific_result}'")
-    run_command(f"echo '{best_cost_instance_exec_info.solver_name}' >> '{g_settings.output_network_specific_result}'")
+    run_command(f"echo '{status}' > '{my_settings.output_network_specific_result}'")
+    run_command(f"echo '{best_cost_instance_exec_info.solver_name}' >> '{my_settings.output_network_specific_result}'")
     run_command(f"echo '{best_cost_instance_exec_info.short_uniq_model_name}'"
-                f" >> '{g_settings.output_network_specific_result}'")
+                f" >> '{my_settings.output_network_specific_result}'")
     run_command(f"echo '{best_cost_instance_exec_info.uniq_std_out_err_file_path}'"
-                f" >> '{g_settings.output_network_specific_result}'")
-    run_command(f"echo '{best_cost}' >> '{g_settings.output_network_specific_result}'")
-    run_command(f"echo '{file_to_parse}' >> '{g_settings.output_network_specific_result}'")
-    run_command(f"echo '{objective_value}' >> '{g_settings.output_network_specific_result}'")
-    run_command(f"echo '{solution_vector}' >> '{g_settings.output_network_specific_result}'")
+                f" >> '{my_settings.output_network_specific_result}'")
+    run_command(f"echo '{best_cost}' >> '{my_settings.output_network_specific_result}'")
+    run_command(f"echo '{file_to_parse}' >> '{my_settings.output_network_specific_result}'")
+    run_command(f"echo '{objective_value}' >> '{my_settings.output_network_specific_result}'")
+    run_command(f"echo '{solution_vector}' >> '{my_settings.output_network_specific_result}'")
     g_logger.info('FINISHED: Writing the best solution found to result file')
     return
 
 
-def update_settings(args: argparse.Namespace):
+def update_settings(args: argparse.Namespace) -> AutoExecutorSettings:
     """
-    Store the settings in g_settings object
+    Store the settings in my_settings object and return it
 
     Args:
         args: command line arguments parsed by `argparse`
     """
     global g_logger
 
-    g_settings.debug = args.debug
+    my_settings = AutoExecutorSettings()
+    my_settings.debug = args.debug
 
+    # REFER: https://github.com/alttch/neotermcolor/blob/master/neotermcolor/__init__.py#L120
     # If STDOUT and STDERR are connected to a terminal, then use `rich` logging, otherwise simple logging
     if (os.getenv('ANSI_COLORS_DISABLED') is None) and (sys.stdout.isatty() and sys.stderr.isatty()):
         # noinspection PyArgumentList
@@ -1306,42 +1295,43 @@ def update_settings(args: argparse.Namespace):
         g_logger.error(f"Cannot access '{args.path}': No such file or directory")
         exit(2)
     g_logger.info(f"Current working directory = '{os.getcwd()}'")
-    g_settings.set_data_file_path(args.path)
-    g_logger.info(f"Graph/Network (i.e. Data/Testcase file) = '{g_settings.data_file_path}'")
-    g_logger.info(f"Input file hash = '{g_settings.data_file_hash}'")
+    my_settings.set_data_file_path(args.path)
+    g_logger.info(f"Graph/Network (i.e. Data/Testcase file) = '{my_settings.data_file_path}'")
+    g_logger.info(f"Input file hash = '{my_settings.data_file_hash}'")
 
-    g_settings.set_execution_time_limit(seconds=args.time)
-    g_logger.info(f'Solver Execution Time Limit = {g_settings.r_execution_time_limit // 60 // 60:02}:'
-                  f'{(g_settings.r_execution_time_limit // 60) % 60:02}:'
-                  f'{g_settings.r_execution_time_limit % 60:02}')
+    my_settings.set_execution_time_limit(seconds=args.time)
+    g_logger.info(f'Solver Execution Time Limit = {my_settings.r_execution_time_limit // 60 // 60:02}:'
+                  f'{(my_settings.r_execution_time_limit // 60) % 60:02}:'
+                  f'{my_settings.r_execution_time_limit % 60:02}')
 
     for solver_model_numbers_list in args.solver_models:
         for solver_model_numbers in solver_model_numbers_list:
             splitted_txt = solver_model_numbers.split()
             solver_name, model_numbers = splitted_txt[0], splitted_txt[1:]
             for i in model_numbers:
-                g_settings.solver_model_combinations.append((
+                my_settings.solver_model_combinations.append((
                     solver_name, AutoExecutorSettings.AVAILABLE_MODELS[int(i)]
                 ))
-    g_logger.info(f'Solver Model Combinations = {g_settings.solver_model_combinations}')
+    g_logger.info(f'Solver Model Combinations = {my_settings.solver_model_combinations}')
 
-    g_settings.set_cpu_cores_per_solver(args.threads_per_solver_instance)
-    g_logger.info(f'r_cpu_cores_per_solver = {g_settings.r_cpu_cores_per_solver}')
+    my_settings.set_cpu_cores_per_solver(args.threads_per_solver_instance)
+    g_logger.info(f'r_cpu_cores_per_solver = {my_settings.r_cpu_cores_per_solver}')
 
     if args.jobs == 0:
-        g_settings.r_max_parallel_solvers = len(g_settings.solver_model_combinations)
+        my_settings.r_max_parallel_solvers = len(my_settings.solver_model_combinations)
     elif args.jobs == -1:
-        g_settings.r_max_parallel_solvers = run_command_get_output('nproc')
+        my_settings.r_max_parallel_solvers = run_command_get_output('nproc')
     else:
-        g_settings.r_max_parallel_solvers = args.jobs
-    g_logger.info(f'r_max_parallel_solvers = {g_settings.r_max_parallel_solvers}')
-    if g_settings.r_max_parallel_solvers < len(g_settings.solver_model_combinations):
+        my_settings.r_max_parallel_solvers = args.jobs
+    g_logger.info(f'r_max_parallel_solvers = {my_settings.r_max_parallel_solvers}')
+    if my_settings.r_max_parallel_solvers < len(my_settings.solver_model_combinations):
         # TODO: Add more clear warning message explaining the technique used to get the results
         #       Result = Return the best result found in `EXECUTION_TIME_LIMIT` time among all solver model combinations.
         #                If no result is found, then wait until the first result is found and then return it.
         g_logger.warning('There is a possibility of more time being spent on execution'
                          'as all solver model combinations will not be running in parallel.'
-                         f'\nSolver Model Combinations = {len(g_settings.solver_model_combinations)}')
+                         f'\nSolver Model Combinations = {len(my_settings.solver_model_combinations)}')
+    return my_settings
 
 
 # REFER: https://stackoverflow.com/questions/1265665/how-can-i-check-if-a-string-represents-an-int-without-using-try-except
@@ -1557,10 +1547,10 @@ if __name__ == '__main__':
                            action='store_true',
                            help='Print debug information.')
 
-    update_settings(my_parser.parse_args())
+    my_settings = update_settings(my_parser.parse_args())
     g_logger.info('START main program')
     try:
-        main()
+        main(my_settings)
     except Exception as e:
         g_logger.error(f'FIXME: {type(e)},\n\nException e:\n{e}\n\ntrace:\n{traceback.format_exc()}')
     g_logger.info('FINISHED main program')
