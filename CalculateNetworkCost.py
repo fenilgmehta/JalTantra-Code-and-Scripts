@@ -490,7 +490,11 @@ class SolverOutputAnalyzerOcteract(SolverOutputAnalyzerParent):
     """
     Perform output analysis (i.e. extract solution, error messages and other necessary information) for Octeract solver
 
-    Please refer to Octeract documentation for details: https://docs.octeract.com/#solver_options
+    Please refer to Octeract documentation for details:
+        https://docs.octeract.com/
+        https://docs.octeract.com/#solver_options
+        https://docs.octeract.com/so1001-general_solver_settings
+        https://docplayer.net/187454093-Octeract-engine-user-manual-june-12-2020.html
     """
 
     def __init__(self, engine_path: str, engine_options: str, threads: int):
