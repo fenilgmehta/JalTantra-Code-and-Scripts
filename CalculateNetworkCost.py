@@ -251,6 +251,7 @@ class SolverOutputAnalyzerParent:
         return True, '?'
 
     def extract_solution_vector(self, exec_info: 'NetworkExecutionInformation') -> Tuple[bool, str, float, str]:
+        """Returns: Tuple(status, file_to_parse, objective_value, solution_vector)"""
         g_logger.error(f"`self.extract_solution_vector` is 'Not Implemented' for {self.engine_path=}")
         return False, '?', float('nan'), '?'
 
@@ -668,7 +669,8 @@ class SolverOutputAnalyzerOcteract(SolverOutputAnalyzerParent):
             return False, file_to_parse, json_data['objective_value'], json_data['statistics']['dgo_exit_status']
         objective_value: float = json_data['objective_value']
         solution_vector = '\n'.join(
-            [f'{i}: {j}' for i, j in sorted(json_data['solution_vector'].items(), key=lambda kv: (len(kv[0]), kv[0]))])
+            [f'{i}: {j}' for i, j in sorted(json_data['solution_vector'].items(), key=lambda kv: (len(kv[0]), kv[0]))]
+        )
         return True, file_to_parse, objective_value, solution_vector
 
 
