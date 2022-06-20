@@ -846,8 +846,17 @@ EOF
 echo > /dev/null
 '
         ''', debug_print=self.debug)
-
-        info.tmux_bash_pid = run_command_get_output(f'cat "/tmp/pid_{info.short_uniq_combination}.txt"')
+        # At max we wait for 60 seconds
+        pid_file_wait_time = 0
+        while (not os.path.exists(info.uniq_pid_file_path)) and (pid_file_wait_time < 60):
+            g_logger.info('PID file not generated. Sleeping for 1 second...')
+            pid_file_wait_time += 1
+            time.sleep(1)
+        if os.path.exists(info.uniq_pid_file_path):
+            info.tmux_bash_pid = run_command_get_output(f'cat "{info.uniq_pid_file_path}"')
+        else:
+            g_logger.error(f'FIXME: CHECKME: PID file not created for {info=}')
+            info.tmux_bash_pid = 0
         return info
 
 
@@ -1031,7 +1040,7 @@ def main(my_settings: AutoExecutorSettings) -> None:
     g_logger.debug(f'{tmux_monitor_list=}')
     if len(tmux_monitor_list) == 0:
         g_logger.warning('Failed to start all solver model sessions')
-        
+
         # Sleep for some time so that AMPL and the solver can finish their termination properly, and write the
         # appropriate error messages to STDOUT (which are redirected to "Solver_m1_NetworkHash/std_out_err.txt")
         pass
