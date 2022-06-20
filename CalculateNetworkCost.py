@@ -1031,11 +1031,20 @@ def main(my_settings: AutoExecutorSettings) -> None:
     g_logger.debug(f'{tmux_monitor_list=}')
     if len(tmux_monitor_list) == 0:
         g_logger.warning('Failed to start all solver model sessions')
+        
         # Sleep for some time so that AMPL and the solver can finish their termination properly, and write the
         # appropriate error messages to STDOUT (which are redirected to "Solver_m1_NetworkHash/std_out_err.txt")
+        pass
+        # TODO: Probably, the below 3 lines can be replaced with the 4 lines after them
         g_logger.info('Sleep for 20 seconds for AMPL and the solver to terminate properly')
         time.sleep(20)
         run_command(f"echo 'launch_error' > {my_settings.output_dir_level_1_network_specific}/0_status")
+        # g_logger.debug(run_command(f"while [[ $(tmux ls 2> /dev/null | grep "{g_settings.TMUX_UNIQUE_PREFIX}" | wc -l) > 0 ]] ; do echo 'tmux sessions still running, sleeping for 1 second' ; sleep 1 ; done"))
+        # # g_logger.info('Sleep for 20 seconds for AMPL and the solver to terminate properly')
+        # # time.sleep(20)
+        # run_command(f"echo 'launch_error' > {g_settings.output_dir_level_1_network_specific}/0_status")
+        pass
+
         for exec_info in tmux_finished_list:
             ok, msg = exec_info.solver_info.check_errors(exec_info)
             if ok:
