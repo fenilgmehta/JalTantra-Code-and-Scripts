@@ -1255,22 +1255,35 @@ def main(my_settings: AutoExecutorSettings) -> None:
         return
 
     run_command(f"echo 'success' > {my_settings.output_dir_level_1_network_specific}/0_status")
-    status, file_to_parse, objective_value, solution_vector = \
-        best_cost_instance_exec_info.solver_info.extract_solution_vector(best_cost_instance_exec_info)
+    # status, file_to_parse, objective_value, solution_vector = \
+    #     best_cost_instance_exec_info.solver_info.extract_solution_vector(best_cost_instance_exec_info)
     g_logger.info(f'{best_cost=}')
     g_logger.info(f'Instance={best_cost_instance_exec_info}')
     g_logger.info(f'Solver={best_cost_instance_exec_info.solver_name}, '
                   f'Model={best_cost_instance_exec_info.short_uniq_model_name}')
-    run_command(f"echo '{status}' > '{my_settings.output_network_specific_result}'")
+    # Line 1 = Status (success => True, failure => False)
+    run_command(f"echo '{True}' > '{my_settings.output_network_specific_result}'")
+    # Line 2 = Solver Name
     run_command(f"echo '{best_cost_instance_exec_info.solver_name}' >> '{my_settings.output_network_specific_result}'")
+    # Line 3 = Model Name (unique short form)
     run_command(f"echo '{best_cost_instance_exec_info.short_uniq_model_name}'"
                 f" >> '{my_settings.output_network_specific_result}'")
+    # Line 4 = std_out_err file path of Solver-Model combination
     run_command(f"echo '{best_cost_instance_exec_info.uniq_std_out_err_file_path}'"
                 f" >> '{my_settings.output_network_specific_result}'")
+    # Line 5 = Best value of the objective function that was found by the Solver
     run_command(f"echo '{best_cost}' >> '{my_settings.output_network_specific_result}'")
-    run_command(f"echo '{file_to_parse}' >> '{my_settings.output_network_specific_result}'")
-    run_command(f"echo '{objective_value}' >> '{my_settings.output_network_specific_result}'")
-    run_command(f"echo '{solution_vector}' >> '{my_settings.output_network_specific_result}'")
+    # Line 6+ = Solution data extracted from std_out_err file of the best Solver-Model combination
+    #           using `CalculateNetworkCost_ExtractResultFromAmplOutput.py` program
+    run_command(f"'{sys.executable}' 'CalculateNetworkCost_ExtractResultFromAmplOutput.py' "
+                f"'{best_cost_instance_exec_info.uniq_std_out_err_file_path}' "
+                f"'{(pathlib.Path(my_settings.output_dir_level_1_network_specific) / '0_graph_network_data_testcase.R').resolve()}' "
+                f"1"
+                f" >> '{my_settings.output_network_specific_result}'")
+    # run_command(f"echo '{file_to_parse}' >> '{my_settings.output_network_specific_result}'")  # Line 6
+    # run_command(f"echo '{objective_value}' >> '{my_settings.output_network_specific_result}'")  # Line 7
+    # run_command(f"echo '{solution_vector}' >> '{my_settings.output_network_specific_result}'")  # Line 8+
+
     g_logger.info('FINISHED: Writing the best solution found to result file')
     return
 
