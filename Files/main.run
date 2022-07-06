@@ -1,12 +1,16 @@
 #!/ampl.linux-intel64/ampl
 
+# NOTE
+#   Set syntax highlighting to Python to see the AMPL commands clearly
+#   The character '#' is used for comments (just like Python)
+
 # REFER: https://optirisk-systems.com/wp-content/uploads/2018/05/AMPLDevExtract.pdf
 # NOTE: Also refer CalculateNetworkCost.py > class AutoExecutorSettings > start_solver(self, idx)
 #       for the statements which can be and/or are to be used for execution
 
 reset;
 
-## *** AMPL options
+## *** AMPL options, REFER: https://ampl.com/BOOK/CHAPTERS/
 ## REFER: https://ampl.com/BOOK/CHAPTERS/17-solvers.pdf
 option presolve_eps 1e-9;
 ## REFER: https://ampl.com/BOOK/CHAPTERS/15-display.pdf
@@ -18,7 +22,7 @@ option presolve_eps 1e-9;
 ## *** Solver Configuration
 ## Give absolute path or relative path to the solver from the directory from which AMPL was executed
 
-## Solver: Baron
+## Solver: Baron, REFER: https://ampl.com/products/solvers/solvers-we-sell/baron/options/
 option solver "./ampl.linux-intel64/baron";
 option baron_options "threads=1 barstats keepsol lsolmsg outlev=1 prfreq=100 prtime=2 problem";  # maxtime=300 (i.e. 5 minutes)
 
@@ -34,7 +38,10 @@ option baron_options "threads=1 barstats keepsol lsolmsg outlev=1 prfreq=100 prt
 ## *** Change model here
 model "./Files/Models/m2_basic2_v2.R"
 
-## *** Use the below line for models m1 and m2 (i.e. basic and basic2) else the line after
+## *** Model and Data file mapping
+##       1. Use data files in directory "REPOSITORY/Files/Data/m1_m2/" for models m1 and m2
+##       2. Use data files in directory "REPOSITORY/Files/Data/m3_m4/" for models m3 and m4
+## *** Use the below line for models m1 and m2 (i.e. basic and basic2) else the line after, i.e.
 data "./Files/Data/m1_m2/d1_Sample_input_cycle_twoloop.dat"
 # data "./Files/Data/m3_m4/d1_Sample_input_cycle_twoloop.dat"
 
