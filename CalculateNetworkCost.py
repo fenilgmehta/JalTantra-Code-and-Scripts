@@ -1610,24 +1610,7 @@ def parser_check_jobs_int_range(c: str) -> int:
     return val
 
 
-def check_requirements():
-    """
-    Check if the basic requirements for this code/program/script to properly execute are satisfied or not
-    """
-    ok, res = run_command('which tmux')
-    if not ok:
-        print('`tmux` not installed')
-        exit(1)
-    ok, res = run_command('which bash')
-    if not ok:
-        print('`bash` not installed')
-        exit(1)
-    pass
-
-
-if __name__ == '__main__':
-    check_requirements()
-
+def parse_args() -> argparse.Namespace:
     # Create the parser
     # REFER: https://realpython.com/command-line-interfaces-python-argparse/
     # REFER: https://stackoverflow.com/questions/19124304/what-does-metavar-and-action-mean-in-argparse-in-python
@@ -1710,7 +1693,33 @@ if __name__ == '__main__':
                            action='store_true',
                            help='Print debug information.')
 
-    my_settings = update_settings(my_parser.parse_args())
+    return my_parser.parse_args()
+
+
+# ---
+
+def check_requirements():
+    """
+    Check if the basic requirements for this code/program/script to properly execute are satisfied or not
+    """
+    ok, res = run_command('which tmux')
+    if not ok:
+        print('`tmux` not installed')
+        exit(1)
+    ok, res = run_command('which bash')
+    if not ok:
+        print('`bash` not installed')
+        exit(1)
+    pass
+
+
+# ---
+
+if __name__ == '__main__':
+    check_requirements()
+
+    args: argparse.Namespace = parse_args()
+    my_settings: AutoExecutorSettings = update_settings(args)
     g_logger.info('START main program')
     try:
         main(my_settings)
