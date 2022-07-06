@@ -965,6 +965,8 @@ def extract_best_solution(
     return best_result_exec_info is not None, best_result_till_now, best_result_exec_info
 
 
+# ---
+
 def main(my_settings: AutoExecutorSettings) -> None:
     """Launch the solvers and monitor them based on CLI parameters"""
     # Start initialization of tmux session monitoring lists
@@ -1056,234 +1058,44 @@ def main_write_requests_metadata(my_settings: AutoExecutorSettings) -> None:
     g_logger.info('FINISHED: Writing requests metadata to 0_metadata file')
 
 
-def main_write_result_and_update_status(
-        my_settings: AutoExecutorSettings,
-        status: bool,
-        best_cost: float,
-        best_cost_instance_exec_info: Optional[NetworkExecutionInformation],
-        tmux_finished_list: List[NetworkExecutionInformation]
-) -> None:
-    g_logger.info('START: Writing the best solution found to result file')
-    if not status:
-        main_solvers_finished_unsuccessfully(my_settings, status, tmux_finished_list)
-        return
-    main_write_final_solution(my_settings, best_cost, best_cost_instance_exec_info)
-    g_logger.info('FINISHED: Writing the best solution found to result file')
-    return
-
-
-def main_extract_best_solution_among_all(
+def main_start_first_batch(
         my_settings: AutoExecutorSettings,
         tmux_original_list: List[NetworkExecutionInformation],
         tmux_monitor_list: List[NetworkExecutionInformation],
-        tmux_finished_list: List[NetworkExecutionInformation]
-) -> Tuple[bool, float, Optional[NetworkExecutionInformation]]:
-    g_logger.info('START: Extracting best solution among all solver-model instances')
-    g_logger.debug(f'{len(tmux_monitor_list)=}')
-    g_logger.debug(f'{len(tmux_finished_list)=}')
-    status, best_cost, best_cost_instance_exec_info = extract_best_solution(tmux_original_list,
-                                                                            my_settings.output_result_summary_file)
-    g_logger.debug((status, best_cost, str(best_cost_instance_exec_info)))
-    g_logger.info('FINISHED: Extracting best solution among all solver-model instances')
-    return status, best_cost, best_cost_instance_exec_info
-
-
-def main_terminate_all_instances_post_timeout(
-        my_settings: AutoExecutorSettings,
-        tmux_monitor_list: List[NetworkExecutionInformation],
-        tmux_finished_list: List[NetworkExecutionInformation]
-) -> None:
-    # NOTE: The below loop is required to
-    #       1. wait for the tmux sessions specific to the current PID to stop (either naturally before the
-    #          execution time limit, or get forcefully stopped if execution time limit is exceeded)
-    #       2. move finished tmux session from monitor list to finished list
-    while len(tmux_monitor_list):
-        g_logger.debug("----------")
-        g_logger.debug(f'{tmux_monitor_list=}')
-        g_logger.debug(f'{len(tmux_finished_list)=}')
-        MonitorAndStopper.mas_time(tmux_monitor_list, tmux_finished_list, my_settings.r_execution_time_limit, True)
-        g_logger.debug(f'{tmux_monitor_list=}')
-        g_logger.debug(f'{len(tmux_finished_list)=}')
-
-
-def main_handle_result_file_exists(my_settings: AutoExecutorSettings) -> None:
-    # Do not overwrite the result file of previous execution
-    # Just rename the result file of previous execution
-    if not os.path.exists(my_settings.output_network_specific_result):
-        return
-
-    path_prefix, path_suffix = os.path.splitext(my_settings.output_network_specific_result)
-    new_path = None
-    for i in range(1, 10_000_000):
-        new_path = f'{path_prefix}_{i:07}{path_suffix}'
-        if not os.path.exists(new_path):
-            break
-    os.rename(src=my_settings.output_network_specific_result, dst=new_path)
-    g_logger.info(f"Old Solution Renamed from '{os.path.split(my_settings.output_network_specific_result)[1]}'"
-                  f" -> '{os.path.split(new_path)[1]}'")
-
-
-def main_write_final_solution(
-        my_settings: AutoExecutorSettings,
-        best_cost: float,
-        best_cost_instance_exec_info: NetworkExecutionInformation
-) -> None:
-    run_command(f"echo 'success' > {my_settings.output_dir_level_1_network_specific}/0_status")
-    # status, file_to_parse, objective_value, solution_vector = \
-    #     best_cost_instance_exec_info.solver_info.extract_solution_vector(best_cost_instance_exec_info)
-    g_logger.info(f'{best_cost=}')
-    g_logger.info(f'Instance={best_cost_instance_exec_info}')
-    g_logger.info(f'Solver={best_cost_instance_exec_info.solver_name}, '
-                  f'Model={best_cost_instance_exec_info.short_uniq_model_name}')
-    # Line 1 = Status (success => True, failure => False)
-    run_command(f"echo '{True}' > '{my_settings.output_network_specific_result}'")
-    # Line 2 = Solver Name
-    run_command(f"echo '{best_cost_instance_exec_info.solver_name}' >> '{my_settings.output_network_specific_result}'")
-    # Line 3 = Model Name (unique short form)
-    run_command(f"echo '{best_cost_instance_exec_info.short_uniq_model_name}'"
-                f" >> '{my_settings.output_network_specific_result}'")
-    # Line 4 = std_out_err file path of Solver-Model combination
-    run_command(f"echo '{best_cost_instance_exec_info.uniq_std_out_err_file_path}'"
-                f" >> '{my_settings.output_network_specific_result}'")
-    # Line 5 = Best value of the objective function that was found by the Solver
-    run_command(f"echo '{best_cost}' >> '{my_settings.output_network_specific_result}'")
-    # Line 6+ = Solution data extracted from std_out_err file of the best Solver-Model combination
-    #           using `CalculateNetworkCost_ExtractResultFromAmplOutput.py` program
-    run_command(f"'{sys.executable}' 'CalculateNetworkCost_ExtractResultFromAmplOutput.py' "
-                f"'{best_cost_instance_exec_info.uniq_std_out_err_file_path}' "
-                f"'{(pathlib.Path(my_settings.output_dir_level_1_network_specific) / '0_graph_network_data_testcase.R').resolve()}' "
-                f"1"
-                f" >> '{my_settings.output_network_specific_result}'")
-    # run_command(f"echo '{file_to_parse}' >> '{my_settings.output_network_specific_result}'")  # Line 6
-    # run_command(f"echo '{objective_value}' >> '{my_settings.output_network_specific_result}'")  # Line 7
-    # run_command(f"echo '{solution_vector}' >> '{my_settings.output_network_specific_result}'")  # Line 8+
-
-
-def main_solvers_finished_unsuccessfully(
-        my_settings: AutoExecutorSettings,
-        status: bool,
-        tmux_finished_list: List[NetworkExecutionInformation]
-) -> None:
-    g_logger.error('NO feasible solution found')
-    run_command(f"echo '{status}' > '{my_settings.output_network_specific_result}'")
-    run_command(f"echo 'finished:Either some unknown error, or NO feasible solution found'"
-                f" > {my_settings.output_dir_level_1_network_specific}/0_status")
-    for exec_info in tmux_finished_list:
-        ok, msg = exec_info.solver_info.check_errors(exec_info)
-        if ok:
-            continue
-        msg = msg.replace("'", "'\"'\"'")
-        run_command(f"echo '\n---+++---\n\n{exec_info.solver_name}, {exec_info.short_uniq_model_name}'"
-                    f" >> {my_settings.output_dir_level_1_network_specific}/0_status")
-        run_command(f"echo '\n{msg}' >> {my_settings.output_dir_level_1_network_specific}/0_status")
-    del exec_info, ok, msg
-    g_logger.info('FINISHED: Writing the best solution found to result file')
-
-
-def main_wait_for_solvers_to_end(my_settings: AutoExecutorSettings) -> None:
-    # - Wait for the `tmux` sessions to truly end. This is required because, `MonitorAndStopper.mas_time`
-    #   only sends the SIGINT signal to the solvers. The solvers start their stopping process after receiving
-    #   this SIGINT signal. But, they do not stop immediately (one possible reason what was found in Octeract
-    #   was that it tries to "communicate the results to its servers" and keeps retrying for "some limited
-    #   number of times" if "the server is unreachable due to some reason").
-    # - If this loop is not there, then there is a possibility that we think that the solver-model combination
-    #   failed even if solver had found a "feasible or global" solution, because the solver had not returned the
-    #   final value of the variables that were to be calculated/found to AMPL for printing (here, to std_out_err.txt)
-    while run_command(f'tmux ls 2> /dev/null | grep "{my_settings.TMUX_UNIQUE_PREFIX}" | wc -l', '0', True)[1] != '0':
-        g_logger.info('WAITING for the tmux instances to stop (probably AMPL or some solver has not terminated)')
-        time.sleep(10)
-
-
-def main_copy_solver_files_from_tmp(my_settings: AutoExecutorSettings) -> None:
-    # NOTE: We will not copy files with glob `/tmp/at*nl` because they
-    #       are only used to pass information from AMPL to solver
-    g_logger.info('START: Copying solution files from /tmp to `g_settings.OUTPUT_DIR_LEVEL_1_DATA`')
-    run_command_get_output(f"cp -r /tmp/at*octsol /tmp/baron_tmp* '{my_settings.OUTPUT_DIR_LEVEL_1_DATA}'")
-    g_logger.info('FINISHED: Copying solution files from /tmp to `g_settings.OUTPUT_DIR_LEVEL_1_DATA`')
-
-
-def main_error_checking_round_3(tmux_original_list: List[NetworkExecutionInformation]) -> None:
-    # This is done primarily for logging purpose
-    g_logger.info('START: Error checking - Round 3 (last round)')
-    for exec_info in tmux_original_list:
-        ok, err_msg = exec_info.solver_info.check_errors(exec_info)
-        if not ok:
-            g_logger.warning(str(exec_info))
-            g_logger.error(err_msg)
-    del exec_info, ok, err_msg
-    g_logger.info('FINISHED: Error checking - Round 3 (last round)')
-
-
-def main_start_second_batch(
-        my_settings: AutoExecutorSettings,
-        tmux_original_list: List[NetworkExecutionInformation],
-        tmux_monitor_list: List[NetworkExecutionInformation],
-        tmux_finished_list: List[NetworkExecutionInformation],
         min_combination_parallel_solvers: int
 ) -> None:
-    g_logger.info('START: Execution of the remaining solver-model combinations')
-    for i in range(min_combination_parallel_solvers, len(my_settings.solver_model_combinations)):
-        g_logger.debug(run_command_get_output(f'tmux ls | grep "{my_settings.TMUX_UNIQUE_PREFIX}"', debug_print=True))
-
-        while True:
-            tmux_sessions_running = int(run_command_get_output(
-                f'tmux ls 2> /dev/null | grep "{my_settings.TMUX_UNIQUE_PREFIX}" | wc -l'
-            ))
-            g_logger.debug(tmux_sessions_running)
-
-            if tmux_sessions_running < my_settings.r_max_parallel_solvers:
-                break
-            g_logger.debug("----------")
-            g_logger.debug(f'{tmux_monitor_list=}')
-            g_logger.debug(f'{len(tmux_finished_list)=}')
-            MonitorAndStopper.mas_time(tmux_monitor_list, tmux_finished_list, my_settings.r_execution_time_limit, True)
-            g_logger.debug(f'{tmux_monitor_list=}')
-            g_logger.debug(f'{len(tmux_finished_list)=}')
-
+    g_logger.info('START: Execution of first batch of solvers')
+    run_command(f"echo 'running' > {my_settings.output_dir_level_1_network_specific}/0_status")
+    for i in range(min_combination_parallel_solvers):
         exec_info = my_settings.start_solver(i)
+        g_logger.debug(str(exec_info))
+        g_logger.debug(f'{exec_info.tmux_bash_pid=}')
+        if exec_info.tmux_bash_pid == '0':
+            g_logger.error('FIXME: exec_info.tmux_bash_pid is 0')
+            continue
         tmux_original_list.append(exec_info)
         tmux_monitor_list.append(exec_info)
         g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
         time.sleep(0.2)
-        del tmux_sessions_running, exec_info
-    g_logger.info('FINISHED: Execution of the remaining solver-model combinations')
+        g_logger.debug(f'{len(tmux_monitor_list)=}')
+    del i, exec_info
+    g_logger.info('FINISHED: Execution of first batch of solvers')
 
 
-def main_give_extra_time_if_no_solution_found(tmux_monitor_list: List[NetworkExecutionInformation]) -> None:
-    # - Check if any feasible solution has been found by the first batch of tmux sessions or not.
-    # - If no feasible solution has been found by any of the session of the first batch, then give them
-    #   limited amount of extra time to find a feasible solution.
-    # - If "a feasible solution is found" or "extra time has been consumed", then proceed with the second batch.
-    # NOTE: `at_least_one_solution_found` variable is unused as of now. However, it may be needed in future.
-    at_least_one_solution_found = False
-    extra_time_given = 0
-    while len(tmux_monitor_list) > 0 and (not check_solution_status(tmux_monitor_list)):
-        extra_time_given += 30
-        g_logger.info(f'Extra time given = {extra_time_given} of 300 seconds')
-        time.sleep(30)  # Give 30 more seconds to the running solvers
-        # TODO: NOTE: In future, this too can be taken as a command line parameter
-        # Maximum 5 minutes extra time is given
-        if extra_time_given >= 300:
-            g_logger.info('"Extra time" limit reached')
-            break
-    # NOTE: The below statement will work in most cases. However, there can be corner cases where a solution
-    #       is found by one of the session of first batch but still `at_least_one_solution_found` is False.
-    #       This case can occur when a solver finds the solution at the time between "checking of solution status
-    #       in the above loop" and "stopping of that session in the below `for` loop of second batch"
-    at_least_one_solution_found = (extra_time_given < 300)
-    del extra_time_given, at_least_one_solution_found
-
-
-def main_error_checking_round_2(tmux_original_list: List[NetworkExecutionInformation]) -> None:
-    # This is done primarily for logging purpose
-    g_logger.info('START: Error checking - Round 2')
-    for exec_info in tmux_original_list:
-        ok, err_msg = exec_info.solver_info.check_errors(exec_info)
-        if not ok:
-            g_logger.warning(str(exec_info))
-            g_logger.error(err_msg)
-    del exec_info, ok, err_msg
-    g_logger.info('FINISHED: Error checking - Round 2')
+def main_error_checking_round_1(tmux_monitor_list: List[NetworkExecutionInformation],
+                                tmux_finished_list: List[NetworkExecutionInformation]) -> None:
+    g_logger.info('START: Error checking - Round 1')
+    tmux_monitor_list_idx_to_remove = list()
+    for idx, exec_info in enumerate(tmux_monitor_list):
+        if get_process_running_status(exec_info.tmux_bash_pid):
+            continue
+        g_logger.warning(f'tmux session stopped "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
+        g_logger.error(exec_info.solver_info.check_errors(exec_info))
+        tmux_monitor_list_idx_to_remove.append(idx)
+    for idx in reversed(tmux_monitor_list_idx_to_remove):
+        tmux_finished_list.insert(0, tmux_monitor_list.pop(idx))
+    del tmux_monitor_list_idx_to_remove, idx, exec_info
+    g_logger.info('FINISHED: Error checking - Round 1')
 
 
 def main_check_launch_errors(
@@ -1370,45 +1182,237 @@ def main_busy_waiting(
     del execution_time_left
 
 
-def main_error_checking_round_1(tmux_monitor_list: List[NetworkExecutionInformation],
-                                tmux_finished_list: List[NetworkExecutionInformation]) -> None:
-    g_logger.info('START: Error checking - Round 1')
-    tmux_monitor_list_idx_to_remove = list()
-    for idx, exec_info in enumerate(tmux_monitor_list):
-        if get_process_running_status(exec_info.tmux_bash_pid):
-            continue
-        g_logger.warning(f'tmux session stopped "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
-        g_logger.error(exec_info.solver_info.check_errors(exec_info))
-        tmux_monitor_list_idx_to_remove.append(idx)
-    for idx in reversed(tmux_monitor_list_idx_to_remove):
-        tmux_finished_list.insert(0, tmux_monitor_list.pop(idx))
-    del tmux_monitor_list_idx_to_remove, idx, exec_info
-    g_logger.info('FINISHED: Error checking - Round 1')
+def main_error_checking_round_2(tmux_original_list: List[NetworkExecutionInformation]) -> None:
+    # This is done primarily for logging purpose
+    g_logger.info('START: Error checking - Round 2')
+    for exec_info in tmux_original_list:
+        ok, err_msg = exec_info.solver_info.check_errors(exec_info)
+        if not ok:
+            g_logger.warning(str(exec_info))
+            g_logger.error(err_msg)
+    del exec_info, ok, err_msg
+    g_logger.info('FINISHED: Error checking - Round 2')
 
 
-def main_start_first_batch(
+def main_give_extra_time_if_no_solution_found(tmux_monitor_list: List[NetworkExecutionInformation]) -> None:
+    # - Check if any feasible solution has been found by the first batch of tmux sessions or not.
+    # - If no feasible solution has been found by any of the session of the first batch, then give them
+    #   limited amount of extra time to find a feasible solution.
+    # - If "a feasible solution is found" or "extra time has been consumed", then proceed with the second batch.
+    # NOTE: `at_least_one_solution_found` variable is unused as of now. However, it may be needed in future.
+    at_least_one_solution_found = False
+    extra_time_given = 0
+    while len(tmux_monitor_list) > 0 and (not check_solution_status(tmux_monitor_list)):
+        extra_time_given += 30
+        g_logger.info(f'Extra time given = {extra_time_given} of 300 seconds')
+        time.sleep(30)  # Give 30 more seconds to the running solvers
+        # TODO: NOTE: In future, this too can be taken as a command line parameter
+        # Maximum 5 minutes extra time is given
+        if extra_time_given >= 300:
+            g_logger.info('"Extra time" limit reached')
+            break
+    # NOTE: The below statement will work in most cases. However, there can be corner cases where a solution
+    #       is found by one of the session of first batch but still `at_least_one_solution_found` is False.
+    #       This case can occur when a solver finds the solution at the time between "checking of solution status
+    #       in the above loop" and "stopping of that session in the below `for` loop of second batch"
+    at_least_one_solution_found = (extra_time_given < 300)
+    del extra_time_given, at_least_one_solution_found
+
+
+def main_start_second_batch(
         my_settings: AutoExecutorSettings,
         tmux_original_list: List[NetworkExecutionInformation],
         tmux_monitor_list: List[NetworkExecutionInformation],
+        tmux_finished_list: List[NetworkExecutionInformation],
         min_combination_parallel_solvers: int
 ) -> None:
-    g_logger.info('START: Execution of first batch of solvers')
-    run_command(f"echo 'running' > {my_settings.output_dir_level_1_network_specific}/0_status")
-    for i in range(min_combination_parallel_solvers):
+    g_logger.info('START: Execution of the remaining solver-model combinations')
+    for i in range(min_combination_parallel_solvers, len(my_settings.solver_model_combinations)):
+        g_logger.debug(run_command_get_output(f'tmux ls | grep "{my_settings.TMUX_UNIQUE_PREFIX}"', debug_print=True))
+
+        while True:
+            tmux_sessions_running = int(run_command_get_output(
+                f'tmux ls 2> /dev/null | grep "{my_settings.TMUX_UNIQUE_PREFIX}" | wc -l'
+            ))
+            g_logger.debug(tmux_sessions_running)
+
+            if tmux_sessions_running < my_settings.r_max_parallel_solvers:
+                break
+            g_logger.debug("----------")
+            g_logger.debug(f'{tmux_monitor_list=}')
+            g_logger.debug(f'{len(tmux_finished_list)=}')
+            MonitorAndStopper.mas_time(tmux_monitor_list, tmux_finished_list, my_settings.r_execution_time_limit, True)
+            g_logger.debug(f'{tmux_monitor_list=}')
+            g_logger.debug(f'{len(tmux_finished_list)=}')
+
         exec_info = my_settings.start_solver(i)
-        g_logger.debug(str(exec_info))
-        g_logger.debug(f'{exec_info.tmux_bash_pid=}')
-        if exec_info.tmux_bash_pid == '0':
-            g_logger.error('FIXME: exec_info.tmux_bash_pid is 0')
-            continue
         tmux_original_list.append(exec_info)
         tmux_monitor_list.append(exec_info)
         g_logger.info(f'tmux session "{exec_info.short_uniq_combination}" -> {exec_info.tmux_bash_pid}')
         time.sleep(0.2)
-        g_logger.debug(f'{len(tmux_monitor_list)=}')
-    del i, exec_info
-    g_logger.info('FINISHED: Execution of first batch of solvers')
+        del tmux_sessions_running, exec_info
+    g_logger.info('FINISHED: Execution of the remaining solver-model combinations')
 
+
+def main_terminate_all_instances_post_timeout(
+        my_settings: AutoExecutorSettings,
+        tmux_monitor_list: List[NetworkExecutionInformation],
+        tmux_finished_list: List[NetworkExecutionInformation]
+) -> None:
+    # NOTE: The below loop is required to
+    #       1. wait for the tmux sessions specific to the current PID to stop (either naturally before the
+    #          execution time limit, or get forcefully stopped if execution time limit is exceeded)
+    #       2. move finished tmux session from monitor list to finished list
+    while len(tmux_monitor_list):
+        g_logger.debug("----------")
+        g_logger.debug(f'{tmux_monitor_list=}')
+        g_logger.debug(f'{len(tmux_finished_list)=}')
+        MonitorAndStopper.mas_time(tmux_monitor_list, tmux_finished_list, my_settings.r_execution_time_limit, True)
+        g_logger.debug(f'{tmux_monitor_list=}')
+        g_logger.debug(f'{len(tmux_finished_list)=}')
+
+
+def main_error_checking_round_3(tmux_original_list: List[NetworkExecutionInformation]) -> None:
+    # This is done primarily for logging purpose
+    g_logger.info('START: Error checking - Round 3 (last round)')
+    for exec_info in tmux_original_list:
+        ok, err_msg = exec_info.solver_info.check_errors(exec_info)
+        if not ok:
+            g_logger.warning(str(exec_info))
+            g_logger.error(err_msg)
+    del exec_info, ok, err_msg
+    g_logger.info('FINISHED: Error checking - Round 3 (last round)')
+
+
+def main_copy_solver_files_from_tmp(my_settings: AutoExecutorSettings) -> None:
+    # NOTE: We will not copy files with glob `/tmp/at*nl` because they
+    #       are only used to pass information from AMPL to solver
+    g_logger.info('START: Copying solution files from /tmp to `g_settings.OUTPUT_DIR_LEVEL_1_DATA`')
+    run_command_get_output(f"cp -r /tmp/at*octsol /tmp/baron_tmp* '{my_settings.OUTPUT_DIR_LEVEL_1_DATA}'")
+    g_logger.info('FINISHED: Copying solution files from /tmp to `g_settings.OUTPUT_DIR_LEVEL_1_DATA`')
+
+
+def main_wait_for_solvers_to_end(my_settings: AutoExecutorSettings) -> None:
+    # - Wait for the `tmux` sessions to truly end. This is required because, `MonitorAndStopper.mas_time`
+    #   only sends the SIGINT signal to the solvers. The solvers start their stopping process after receiving
+    #   this SIGINT signal. But, they do not stop immediately (one possible reason what was found in Octeract
+    #   was that it tries to "communicate the results to its servers" and keeps retrying for "some limited
+    #   number of times" if "the server is unreachable due to some reason").
+    # - If this loop is not there, then there is a possibility that we think that the solver-model combination
+    #   failed even if solver had found a "feasible or global" solution, because the solver had not returned the
+    #   final value of the variables that were to be calculated/found to AMPL for printing (here, to std_out_err.txt)
+    while run_command(f'tmux ls 2> /dev/null | grep "{my_settings.TMUX_UNIQUE_PREFIX}" | wc -l', '0', True)[1] != '0':
+        g_logger.info('WAITING for the tmux instances to stop (probably AMPL or some solver has not terminated)')
+        time.sleep(10)
+
+
+def main_extract_best_solution_among_all(
+        my_settings: AutoExecutorSettings,
+        tmux_original_list: List[NetworkExecutionInformation],
+        tmux_monitor_list: List[NetworkExecutionInformation],
+        tmux_finished_list: List[NetworkExecutionInformation]
+) -> Tuple[bool, float, Optional[NetworkExecutionInformation]]:
+    g_logger.info('START: Extracting best solution among all solver-model instances')
+    g_logger.debug(f'{len(tmux_monitor_list)=}')
+    g_logger.debug(f'{len(tmux_finished_list)=}')
+    status, best_cost, best_cost_instance_exec_info = extract_best_solution(tmux_original_list,
+                                                                            my_settings.output_result_summary_file)
+    g_logger.debug((status, best_cost, str(best_cost_instance_exec_info)))
+    g_logger.info('FINISHED: Extracting best solution among all solver-model instances')
+    return status, best_cost, best_cost_instance_exec_info
+
+
+def main_handle_result_file_exists(my_settings: AutoExecutorSettings) -> None:
+    # Do not overwrite the result file of previous execution
+    # Just rename the result file of previous execution
+    if not os.path.exists(my_settings.output_network_specific_result):
+        return
+
+    path_prefix, path_suffix = os.path.splitext(my_settings.output_network_specific_result)
+    new_path = None
+    for i in range(1, 10_000_000):
+        new_path = f'{path_prefix}_{i:07}{path_suffix}'
+        if not os.path.exists(new_path):
+            break
+    os.rename(src=my_settings.output_network_specific_result, dst=new_path)
+    g_logger.info(f"Old Solution Renamed from '{os.path.split(my_settings.output_network_specific_result)[1]}'"
+                  f" -> '{os.path.split(new_path)[1]}'")
+
+
+def main_write_result_and_update_status(
+        my_settings: AutoExecutorSettings,
+        status: bool,
+        best_cost: float,
+        best_cost_instance_exec_info: Optional[NetworkExecutionInformation],
+        tmux_finished_list: List[NetworkExecutionInformation]
+) -> None:
+    g_logger.info('START: Writing the best solution found to result file')
+    if not status:
+        main_solvers_finished_unsuccessfully(my_settings, status, tmux_finished_list)
+        return
+    main_write_final_solution(my_settings, best_cost, best_cost_instance_exec_info)
+    g_logger.info('FINISHED: Writing the best solution found to result file')
+    return
+
+
+def main_solvers_finished_unsuccessfully(
+        my_settings: AutoExecutorSettings,
+        status: bool,
+        tmux_finished_list: List[NetworkExecutionInformation]
+) -> None:
+    g_logger.error('NO feasible solution found')
+    run_command(f"echo '{status}' > '{my_settings.output_network_specific_result}'")
+    run_command(f"echo 'finished:Either some unknown error, or NO feasible solution found'"
+                f" > {my_settings.output_dir_level_1_network_specific}/0_status")
+    for exec_info in tmux_finished_list:
+        ok, msg = exec_info.solver_info.check_errors(exec_info)
+        if ok:
+            continue
+        msg = msg.replace("'", "'\"'\"'")
+        run_command(f"echo '\n---+++---\n\n{exec_info.solver_name}, {exec_info.short_uniq_model_name}'"
+                    f" >> {my_settings.output_dir_level_1_network_specific}/0_status")
+        run_command(f"echo '\n{msg}' >> {my_settings.output_dir_level_1_network_specific}/0_status")
+    del exec_info, ok, msg
+    g_logger.info('FINISHED: Writing the best solution found to result file')
+
+
+def main_write_final_solution(
+        my_settings: AutoExecutorSettings,
+        best_cost: float,
+        best_cost_instance_exec_info: NetworkExecutionInformation
+) -> None:
+    run_command(f"echo 'success' > {my_settings.output_dir_level_1_network_specific}/0_status")
+    # status, file_to_parse, objective_value, solution_vector = \
+    #     best_cost_instance_exec_info.solver_info.extract_solution_vector(best_cost_instance_exec_info)
+    g_logger.info(f'{best_cost=}')
+    g_logger.info(f'Instance={best_cost_instance_exec_info}')
+    g_logger.info(f'Solver={best_cost_instance_exec_info.solver_name}, '
+                  f'Model={best_cost_instance_exec_info.short_uniq_model_name}')
+    # Line 1 = Status (success => True, failure => False)
+    run_command(f"echo '{True}' > '{my_settings.output_network_specific_result}'")
+    # Line 2 = Solver Name
+    run_command(f"echo '{best_cost_instance_exec_info.solver_name}' >> '{my_settings.output_network_specific_result}'")
+    # Line 3 = Model Name (unique short form)
+    run_command(f"echo '{best_cost_instance_exec_info.short_uniq_model_name}'"
+                f" >> '{my_settings.output_network_specific_result}'")
+    # Line 4 = std_out_err file path of Solver-Model combination
+    run_command(f"echo '{best_cost_instance_exec_info.uniq_std_out_err_file_path}'"
+                f" >> '{my_settings.output_network_specific_result}'")
+    # Line 5 = Best value of the objective function that was found by the Solver
+    run_command(f"echo '{best_cost}' >> '{my_settings.output_network_specific_result}'")
+    # Line 6+ = Solution data extracted from std_out_err file of the best Solver-Model combination
+    #           using `CalculateNetworkCost_ExtractResultFromAmplOutput.py` program
+    run_command(f"'{sys.executable}' 'CalculateNetworkCost_ExtractResultFromAmplOutput.py' "
+                f"'{best_cost_instance_exec_info.uniq_std_out_err_file_path}' "
+                f"'{(pathlib.Path(my_settings.output_dir_level_1_network_specific) / '0_graph_network_data_testcase.R').resolve()}' "
+                f"1"
+                f" >> '{my_settings.output_network_specific_result}'")
+    # run_command(f"echo '{file_to_parse}' >> '{my_settings.output_network_specific_result}'")  # Line 6
+    # run_command(f"echo '{objective_value}' >> '{my_settings.output_network_specific_result}'")  # Line 7
+    # run_command(f"echo '{solution_vector}' >> '{my_settings.output_network_specific_result}'")  # Line 8+
+
+
+# ---
 
 def update_settings(args: argparse.Namespace) -> AutoExecutorSettings:
     """
@@ -1490,6 +1494,8 @@ def update_settings(args: argparse.Namespace) -> AutoExecutorSettings:
                          f'\nSolver Model Combinations = {len(my_settings.solver_model_combinations)}')
     return my_settings
 
+
+# ---
 
 # REFER: https://stackoverflow.com/questions/1265665/how-can-i-check-if-a-string-represents-an-int-without-using-try-except
 def parser_check_solver_models(val: str) -> str:
