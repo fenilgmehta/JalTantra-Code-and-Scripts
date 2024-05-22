@@ -1,5 +1,9 @@
 # Jaltantra-Code-and-Scripts
 
+__NOTE:__ This has been moved to https://github.com/jaltantra/Jaltantra_loop
+
+---
+
 Code and Scripts written for Jaltantra Project
 
 - [Shared Drive Folder](https://drive.google.com/drive/folders/1BbJ7DcGm9CgdjNOvA7nuhdPPYxGLWpC0?usp=sharing)
